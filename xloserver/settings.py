@@ -152,7 +152,7 @@ MEDIA_URL = '/media/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ALLOWED_ORIGINS = ["http://localhost:5173"]
+CORS_ALLOWED_ORIGINS = [get_secret('CORS_ALLOWED_ORIGINS')]
 
 # Email config:
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
