@@ -24,9 +24,6 @@ class MonsterSerializer(serializers.ModelSerializer):
 
 class PostSerializer(serializers.ModelSerializer):
     images = GalleryImageSerializer(many=True, required=False, write_only=True)
-    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-    user_username = serializers.ReadOnlyField(source="user.username")
-    user_email = serializers.ReadOnlyField(source="user.email")
 
     class Meta:
         model = Post

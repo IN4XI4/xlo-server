@@ -5,6 +5,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from .models import Topic, Monster, Post, BlockType, Block, Comment, Like
+from .permissions import PostPermissions, IsStaffOrSuperUser, BlockPermissions, CommentPermissions
 from .serializers import (
     TopicSerializer,
     MonsterSerializer,
@@ -36,9 +37,14 @@ class MonstersViewSet(viewsets.ReadOnlyModelViewSet):
 class PostsViewSet(viewsets.ModelViewSet):
     serializer_class = PostSerializer
     parser_classes = (MultiPartParser,)
+    permission_classes = PostPermissions
     filterset_fields = {
         "title": ("icontains",),
         "topic": (
+            "exact",
+            "in",
+        ),
+        "monster": (
             "exact",
             "in",
         ),
@@ -55,25 +61,33 @@ class PostsViewSet(viewsets.ModelViewSet):
         "is_active": ("exact",),
     }
 
+    def get_permissions(self):
+        """
+        Get the list of permissions that the current action should be checked against.
+        """
+        if self.action == "approve_post":
+            permission_classes = [IsStaffOrSuperUser]
+        else:
+            permission_classes = [permission() for permission in self.permission_classes]
+
+        return [permission() for permission in permission_classes]
+
     def get_queryset(self):
         """
         Retrieves a queryset of Post objects based on user permissions.
-
-        If the user is a superuser, it returns all Post objects. Otherwise,
-        it returns only the active Post objects.
+        It returns only the active Post objects.
 
         Returns:
         - QuerySet: A queryset of Post objects.
         """
-        user = self.request.user
-        return Post.objects.all() if user.is_superuser else Post.objects.filter(is_active=True)
+        return Post.objects.filter(is_active=True)
 
     def create(self, request, *args, **kwargs):
         """
         Overrides the default create method to handle post creation.
 
         After saving the post, the method checks if the user is a superuser. If so,
-        the post's `is_active` attribute is set to True; otherwise, it's set to False.
+        the post's `is_active` attribute is set to True.
 
         Args:
         - request (Request): The HTTP request object containing post data.
@@ -89,8 +103,6 @@ class PostsViewSet(viewsets.ModelViewSet):
         post = serializer.save()
         if request.user.is_superuser:
             post.is_active = True
-        else:
-            post.is_active = False
         post.save()
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -124,6 +136,7 @@ class BlockTypesViewSet(viewsets.ReadOnlyModelViewSet):
 class BlocksViewSet(viewsets.ModelViewSet):
     queryset = Block.objects.all()
     serializer_class = BlockSerializer
+    permission_classes = BlockPermissions
     filterset_fields = {
         "post": ("exact", "in"),
         "post__user": ("exact", "in"),
@@ -133,6 +146,7 @@ class BlocksViewSet(viewsets.ModelViewSet):
 
 class CommentsViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
+    permission_classes = CommentPermissions
     filterset_fields = {
         "comment_text": ("icontains",),
         "post": ("exact", "in"),
@@ -145,17 +159,16 @@ class CommentsViewSet(viewsets.ModelViewSet):
             "gte",
             "lte",
         ),
-        "previous_comment": ("exact",),
         "is_active": ("exact",),
     }
 
     def get_queryset(self):
-        user = self.request.user
-        return Comment.objects.all() if user.is_superuser else Comment.objects.filter(is_active=True)
+        return Comment.objects.filter(is_active=True)
 
 
 class LikesViewSet(viewsets.ModelViewSet):
     serializer_class = LikeSerializer
+    permission_classes = CommentPermissions
     filterset_fields = {
         "user": ("exact",),
         "created_time": (
@@ -169,8 +182,7 @@ class LikesViewSet(viewsets.ModelViewSet):
     }
 
     def get_queryset(self):
-        user = self.request.user
-        return Like.objects.all() if user.is_superuser else Like.objects.filter(is_active=True)
+        return Like.objects.filter(is_active=True)
 
 
 class ContentTypeListView(generics.ListAPIView):
