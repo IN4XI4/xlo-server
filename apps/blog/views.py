@@ -4,13 +4,30 @@ from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
-from .models import Topic, Post, Comment, Like
-from .serializers import TopicSerializer, PostSerializer, CommentSerializer, LikeSerializer, ContentTypeSerializer
+from .models import Topic, Monster, Post, BlockType, Block, Comment, Like
+from .serializers import (
+    TopicSerializer,
+    MonsterSerializer,
+    PostSerializer,
+    CommentSerializer,
+    LikeSerializer,
+    ContentTypeSerializer,
+    BlockTypeSerializer,
+    BlockSerializer,
+)
 
 
-class TopicsViewSet(viewsets.ModelViewSet):
+class TopicsViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Topic.objects.all()
     serializer_class = TopicSerializer
+    filterset_fields = {
+        "name": ("exact", "icontains"),
+    }
+
+
+class MonstersViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Monster.objects.all()
+    serializer_class = MonsterSerializer
     filterset_fields = {
         "name": ("exact", "icontains"),
     }
@@ -94,6 +111,24 @@ class PostsViewSet(viewsets.ModelViewSet):
         post.is_active = True
         post.save()
         return Response({"message": "Post approved"}, status=status.HTTP_202_ACCEPTED)
+
+
+class BlockTypesViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = BlockType.objects.all()
+    serializer_class = BlockTypeSerializer
+    filterset_fields = {
+        "name": ("exact", "icontains"),
+    }
+
+
+class BlocksViewSet(viewsets.ModelViewSet):
+    queryset = Block.objects.all()
+    serializer_class = BlockSerializer
+    filterset_fields = {
+        "post": ("exact", "in"),
+        "post__user": ("exact", "in"),
+        "block_type": ("exact", "in"),
+    }
 
 
 class CommentsViewSet(viewsets.ModelViewSet):

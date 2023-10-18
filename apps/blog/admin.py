@@ -1,10 +1,16 @@
 from django.contrib import admin
 
-from .models import Topic, GalleryImage, Post, Comment, Like
+from .models import Topic, Monster, GalleryImage, Post, BlockType, Block, Comment, Like
 
 
 @admin.register(Topic)
 class TopicAdmin(admin.ModelAdmin):
+    search_fields = ("name",)
+    list_per_page = 100
+
+
+@admin.register(Monster)
+class MonsterAdmin(admin.ModelAdmin):
     search_fields = ("name",)
     list_per_page = 100
 
@@ -15,6 +21,24 @@ class PostAdmin(admin.ModelAdmin):
     list_filter = ("user__username", "is_active")
     search_fields = ("title", "user__username")
     list_per_page = 50
+
+
+@admin.register(BlockType)
+class BlockTypeAdmin(admin.ModelAdmin):
+    search_fields = ("name",)
+    list_per_page = 100
+
+
+@admin.register(Block)
+class BlockAdmin(admin.ModelAdmin):
+    list_display = ("post", "block_type", "post_user")
+    list_filter = ("post", "block_type")
+    search_fields = ("name",)
+    list_per_page = 100
+
+    def post_user(self, obj):
+        return obj.post.user
+    post_user.short_description = 'Post User'
 
 
 @admin.register(Comment)

@@ -20,6 +20,20 @@ class GalleryImage(models.Model):
 
 class Topic(models.Model):
     name = models.CharField(max_length=300)
+    color = models.CharField(max_length=50, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
+def content_monster_file_name(instance, filename):
+    return os.path.join("monsters_pics", filename)
+
+
+class Monster(models.Model):
+    name = models.CharField(max_length=100)
+    biography = models.TextField(blank=True, null=True)
+    picture = models.ImageField(upload_to=content_monster_file_name, null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -28,6 +42,7 @@ class Topic(models.Model):
 class Post(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE)
+    monster = models.ForeignKey(Monster, on_delete=models.CASCADE, blank=True, null=True)
     title = models.CharField(max_length=300)
     content = models.TextField()
     images = models.ManyToManyField(GalleryImage, blank=True)
@@ -40,10 +55,26 @@ class Post(models.Model):
         return self.title
 
 
+class BlockType(models.Model):
+    name = models.CharField(max_length=150)
+
+    def __str__(self):
+        return self.name
+
+
+class Block(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    block_type = models.ForeignKey(BlockType, on_delete=models.CASCADE)
+    content = models.TextField()
+
+    def __str__(self):
+        return f"{self.post.title} - {self.block_type.name}"
+
+
 class Comment(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, null=True, blank=True)
-    comment_text = models.CharField(max_length=250)
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    comment_text = models.CharField(max_length=250)
     is_active = models.BooleanField(default=False)
     created_time = models.DateField(auto_now=False, auto_now_add=True)
     updated_time = models.DateField(auto_now=True)
