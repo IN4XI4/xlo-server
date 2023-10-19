@@ -1,6 +1,6 @@
 from rest_framework import permissions
 
-from .models import Post
+from .models import Story, Card
 
 
 class IsStaffOrSuperUser(permissions.BasePermission):
@@ -12,7 +12,7 @@ class IsStaffOrSuperUser(permissions.BasePermission):
         return request.user and (request.user.is_staff or request.user.is_superuser)
 
 
-class PostPermissions(permissions.BasePermission):
+class StoryPermissions(permissions.BasePermission):
     """
     Custom permission:
     - Require authentication for any action.
@@ -42,7 +42,7 @@ class PostPermissions(permissions.BasePermission):
         return obj.user == request.user
 
 
-class BlockPermissions(PostPermissions):
+class CardPermissions(StoryPermissions):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
@@ -55,19 +55,44 @@ class BlockPermissions(PostPermissions):
             )
             if not has_create_permission:
                 return False
-            post_id = request.data.get("post")
-            if not post_id:
+            story_id = request.data.get("story")
+            if not story_id:
                 return False
             try:
-                post = Post.objects.get(id=post_id)
-                return post.user == request.user
-            except Post.DoesNotExist:
+                story = Story.objects.get(id=story_id)
+                return story.user == request.user
+            except Card.DoesNotExist:
                 return False
 
         return True
 
 
-class CommentPermissions(PostPermissions):
+class BlockPermissions(StoryPermissions):
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        if view.action == "create":
+            has_create_permission = (
+                request.user.groups.filter(name="creator").exists()
+                or request.user.is_staff
+                or request.user.is_superuser
+            )
+            if not has_create_permission:
+                return False
+            card_id = request.data.get("card")
+            if not card_id:
+                return False
+            try:
+                card = Card.objects.get(id=card_id)
+                return card.story.user == request.user
+            except Card.DoesNotExist:
+                return False
+
+        return True
+
+
+class CommentPermissions(StoryPermissions):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False

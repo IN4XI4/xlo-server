@@ -5,49 +5,38 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 
 from apps.users.models import CustomUser
+from apps.base.models import Topic, Monster, Mentor
 
 
-def content_file_name(instance, filename):
-    return os.path.join("gallery", filename)
-
-
-class GalleryImage(models.Model):
-    file_name = models.FileField(upload_to=content_file_name)
-
-    def __str__(self):
-        return str(self.file_name)
-
-
-class Topic(models.Model):
-    name = models.CharField(max_length=300)
-    color = models.CharField(max_length=50, blank=True, null=True)
+class Story(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="stories")
+    topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, related_name="stories")
+    title = models.CharField(max_length=300)
+    subtitle = models.CharField(max_length=300, blank=True, null=True)
+    is_active = models.BooleanField(default=False)
+    created_time = models.DateTimeField(auto_now_add=True)
+    updated_time = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.name
+        return self.title
+
+    class Meta:
+        verbose_name = "Story"
+        verbose_name_plural = "Stories"
 
 
-def content_monster_file_name(instance, filename):
-    return os.path.join("monsters_pics", filename)
+def card_image_upload_path(instance, filename):
+    return f"story_{instance.story.id}/{filename}"
 
 
-class Monster(models.Model):
-    name = models.CharField(max_length=100)
-    biography = models.TextField(blank=True, null=True)
-    picture = models.ImageField(upload_to=content_monster_file_name, null=True, blank=True)
-
-    def __str__(self):
-        return self.name
-
-
-class Post(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE)
-    monster = models.ForeignKey(Monster, on_delete=models.CASCADE, blank=True, null=True)
+class Card(models.Model):
+    story = models.ForeignKey(Story, on_delete=models.CASCADE)
+    monster = models.ForeignKey(Monster, on_delete=models.SET_NULL, blank=True, null=True)
+    mentor = models.ForeignKey(Mentor, on_delete=models.SET_NULL, blank=True, null=True)
     title = models.CharField(max_length=300)
     content = models.TextField()
-    images = models.ManyToManyField(GalleryImage, blank=True)
     allow_comments = models.BooleanField(default=True)
-    is_active = models.BooleanField(default=False)
+    image = models.ImageField(upload_to=card_image_upload_path, blank=True, null=True)
     created_time = models.DateField(auto_now=False, auto_now_add=True)
     updated_time = models.DateField(auto_now=True)
 
@@ -62,18 +51,23 @@ class BlockType(models.Model):
         return self.name
 
 
+def block_image_upload_path(instance, filename):
+    return f"story_{instance.card.story.id}/card_{instance.card.id}/{filename}"
+
+
 class Block(models.Model):
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)
-    block_type = models.ForeignKey(BlockType, on_delete=models.CASCADE)
+    card = models.ForeignKey(Card, on_delete=models.CASCADE)
+    block_type = models.ForeignKey(BlockType, on_delete=models.SET_NULL, blank=True, null=True)
     content = models.TextField()
+    image = models.ImageField(upload_to=block_image_upload_path, blank=True, null=True)
 
     def __str__(self):
-        return f"{self.post.title} - {self.block_type.name}"
+        return f"{self.card.title} - {self.block_type.name if self.block_type else 'No BlockType'}"
 
 
 class Comment(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, null=True, blank=True)
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    story = models.ForeignKey(Story, on_delete=models.CASCADE)
     comment_text = models.CharField(max_length=250)
     is_active = models.BooleanField(default=False)
     created_time = models.DateField(auto_now=False, auto_now_add=True)

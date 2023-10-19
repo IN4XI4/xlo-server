@@ -24,6 +24,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api-token-auth/", views.obtain_auth_token),
     path("api-auth/", include("rest_framework.urls")),
+    path("base/", include("apps.base.urls", namespace="base")),
     path("blog/", include("apps.blog.urls", namespace="blog")),
     path("users/", include("apps.users.urls", namespace="users")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

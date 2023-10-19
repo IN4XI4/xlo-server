@@ -1,43 +1,21 @@
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
-from .models import Topic, Monster, Post, BlockType, Block, Comment, Like, GalleryImage
+from .models import Story, Card, BlockType, Block, Comment, Like
 
 
-class GalleryImageSerializer(serializers.ModelSerializer):
+class StorySerializer(serializers.ModelSerializer):
     class Meta:
-        model = GalleryImage
-        fields = ("file_name",)
-
-
-class TopicSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Topic
-        fields = "__all__"
-
-
-class MonsterSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Monster
-        fields = "__all__"
-
-
-class PostSerializer(serializers.ModelSerializer):
-    images = GalleryImageSerializer(many=True, required=False, write_only=True)
-
-    class Meta:
-        model = Post
+        model = Story
         fields = "__all__"
         read_only_fields = ["is_active", "created_time", "updated_time", "user"]
 
-    def create(self, validated_data):
-        images_data = validated_data.pop("images", [])
-        post = Post.objects.create(**validated_data)
 
-        for image_data in images_data:
-            GalleryImage.objects.create(post=post, **image_data)
-
-        return post
+class CardSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Card
+        fields = "__all__"
+        read_only_fields = ["created_time", "updated_time"]
 
 
 class BlockTypeSerializer(serializers.ModelSerializer):

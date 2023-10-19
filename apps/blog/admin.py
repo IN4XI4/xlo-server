@@ -1,25 +1,21 @@
 from django.contrib import admin
 
-from .models import Topic, Monster, GalleryImage, Post, BlockType, Block, Comment, Like
+from .models import Story, Card, BlockType, Block, Comment, Like
 
 
-@admin.register(Topic)
-class TopicAdmin(admin.ModelAdmin):
-    search_fields = ("name",)
+@admin.register(Story)
+class StoryAdmin(admin.ModelAdmin):
+    list_display = ("title", "user", "topic", "is_active", "created_time")
+    search_fields = ("title",)
+    list_filter = ("user__username", "topic")
     list_per_page = 100
 
 
-@admin.register(Monster)
-class MonsterAdmin(admin.ModelAdmin):
-    search_fields = ("name",)
-    list_per_page = 100
-
-
-@admin.register(Post)
-class PostAdmin(admin.ModelAdmin):
-    list_display = ("title", "topic", "monster", "user", "is_active", "created_time",)
-    list_filter = ("user__username", "is_active")
-    search_fields = ("title", "user__username")
+@admin.register(Card)
+class CardAdmin(admin.ModelAdmin):
+    list_display = ("title", "story", "monster", "mentor", "created_time")
+    list_filter = ("story", "monster", "mentor")
+    search_fields = ("title",)
     list_per_page = 50
 
 
@@ -31,20 +27,15 @@ class BlockTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Block)
 class BlockAdmin(admin.ModelAdmin):
-    list_display = ("post", "block_type", "post_user")
-    list_filter = ("post", "block_type")
-    search_fields = ("name",)
+    list_display = ("card", "block_type")
+    list_filter = ("card", "block_type")
     list_per_page = 100
-
-    def post_user(self, obj):
-        return obj.post.user
-    post_user.short_description = 'Post User'
 
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
-    list_display = ("comment_text", "post", "user", "is_active", "created_time", "updated_time")
-    list_filter = ("user__username", "is_active")
+    list_display = ("comment_text", "story", "user", "is_active", "created_time", "updated_time")
+    list_filter = ("user__username", "story", "is_active")
     search_fields = ("comment_text", "user__username")
     list_per_page = 100
 
@@ -55,6 +46,3 @@ class LikeAdmin(admin.ModelAdmin):
     list_filter = ("user__username", "liked", "is_active")
     search_fields = ("user__username",)
     list_per_page = 100
-
-
-admin.site.register(GalleryImage)
