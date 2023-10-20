@@ -5,15 +5,15 @@ from .serializers import TopicSerializer, SoftSkillSerializer, MonsterSerializer
 
 
 class TopicsViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Topic.objects.all()
+    queryset = Topic.objects.all().order_by('id')
     serializer_class = TopicSerializer
     filterset_fields = {
-        "name": ("exact", "icontains"),
+        "title": ("exact", "icontains"),
     }
 
 
 class SoftSkillsViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = SoftSkill.objects.all()
+    queryset = SoftSkill.objects.all().order_by('id')
     serializer_class = SoftSkillSerializer
     filterset_fields = {
         "name": ("exact", "icontains"),
@@ -21,7 +21,7 @@ class SoftSkillsViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class MonstersViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Monster.objects.all()
+    queryset = Monster.objects.all().order_by('id')
     serializer_class = MonsterSerializer
     filterset_fields = {
         "name": ("exact", "icontains"),
@@ -29,7 +29,7 @@ class MonstersViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class MentorsViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Mentor.objects.all()
+    queryset = Mentor.objects.all().order_by('id')
     serializer_class = MentorSerializer
     filterset_fields = {
         "name": ("exact", "icontains"),
