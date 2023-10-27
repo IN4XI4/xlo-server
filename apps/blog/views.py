@@ -20,7 +20,7 @@ from .serializers import (
 class StoriesViewSet(viewsets.ModelViewSet):
     serializer_class = StorySerializer
     parser_classes = (MultiPartParser,)
-    permission_classes = StoryPermissions
+    permission_classes = [StoryPermissions]
     filterset_fields = {
         "title": ("icontains",),
         "topic": ("exact", "in"),
@@ -96,7 +96,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
 class CardsViewSet(viewsets.ModelViewSet):
     serializer_class = CardSerializer
     parser_classes = (MultiPartParser,)
-    permission_classes = CardPermissions
+    permission_classes = [CardPermissions]
     filterset_fields = {
         "title": ("icontains",),
         "story": ("exact", "in"),
@@ -131,7 +131,7 @@ class BlockTypesViewSet(viewsets.ReadOnlyModelViewSet):
 class BlocksViewSet(viewsets.ModelViewSet):
     queryset = Block.objects.all()
     serializer_class = BlockSerializer
-    permission_classes = BlockPermissions
+    permission_classes = [BlockPermissions]
     filterset_fields = {
         "card": ("exact", "in"),
         "card__story": ("exact", "in"),
@@ -141,7 +141,7 @@ class BlocksViewSet(viewsets.ModelViewSet):
 
 class CommentsViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
-    permission_classes = CommentPermissions
+    permission_classes = [CommentPermissions]
     filterset_fields = {
         "comment_text": ("icontains",),
         "story": ("exact", "in"),
@@ -157,7 +157,7 @@ class CommentsViewSet(viewsets.ModelViewSet):
 
 class LikesViewSet(viewsets.ModelViewSet):
     serializer_class = LikeSerializer
-    permission_classes = CommentPermissions
+    permission_classes = [CommentPermissions]
     filterset_fields = {
         "user": ("exact",),
         "created_time": ("gte", "lte"),
