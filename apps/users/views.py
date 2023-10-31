@@ -2,6 +2,7 @@ import random
 import string
 
 from django.core.mail import send_mail
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -16,9 +17,15 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     permission_classes = [UserPermissions]
 
-    @action(detail=True, methods=["post"])
+    @action(detail=False, methods=["post"])
     def send_reset_code(self, request, pk=None):
-        user = self.get_object()
+        email = request.data.get("email")
+        if not email:
+            return Response({"error": "Email is required."}, status=400)
+        try:
+            user = CustomUser.objects.get(email=email)
+        except ObjectDoesNotExist:
+            return Response({"error": "User not found."}, status=404)
         reset_code = "".join(random.choices(string.ascii_letters + string.digits, k=6))
 
         user.reset_code = reset_code
