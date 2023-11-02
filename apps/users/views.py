@@ -3,13 +3,13 @@ import string
 
 from django.core.mail import send_mail
 from django.core.exceptions import ObjectDoesNotExist
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from .models import CustomUser
 from .permissions import UserPermissions
-from .serializers import UserSerializer
+from .serializers import UserSerializer, PasswordResetSerializer
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -33,9 +33,25 @@ class UserViewSet(viewsets.ModelViewSet):
 
         send_mail(
             "Reset your password",
-            f"Use the following code to reset your password: {reset_code}. Access http://localhost:5173/view:resetpassword to proceed.",
+            f"Use the following code to reset your password: {reset_code}. Access http://localhost:5173/?view=resetpassword to proceed.",
             "from_email@example.com",
             [user.email],
             fail_silently=False,
         )
         return Response({"message": "Reset code sent to email."})
+
+    @action(detail=False, methods=["post"])
+    def reset_password(self, request):
+        serializer = PasswordResetSerializer(data=request.data)
+        if serializer.is_valid():
+            reset_code = serializer.validated_data["reset_code"]
+            try:
+                user = CustomUser.objects.get(reset_code=reset_code)
+            except CustomUser.DoesNotExist:
+                return Response({"detail": "Invalid reset code."}, status=status.HTTP_400_BAD_REQUEST)
+
+            user.set_password(serializer.validated_data["password"])
+            user.reset_code = None
+            user.save()
+            return Response({"message": "Password reset successfully.", "email": user.email})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

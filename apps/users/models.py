@@ -26,7 +26,6 @@ def content_file_name(instance, filename):
 
 
 class CustomUser(AbstractUser):
-    # TODO: add reset_code field
     email = models.EmailField(unique=True)
     birthday = models.DateField(auto_now=False, auto_now_add=False, null=True, blank=True)
     profile_picture = models.ImageField(upload_to=content_file_name, null=True, blank=True)
