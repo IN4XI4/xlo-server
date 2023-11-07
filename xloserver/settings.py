@@ -37,7 +37,7 @@ SECRET_KEY = get_secret('SECRET_KEY')
 DEBUG = get_secret('DEBUG')
 
 
-ALLOWED_HOSTS = ['13.37.228.85']
+ALLOWED_HOSTS = ['15.237.176.147', 'localhost', '127.0.0.1']
 
 
 # Application definition
