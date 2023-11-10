@@ -1,8 +1,9 @@
+import json
 import random
 import string
 
 from django.core.mail import send_mail
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ImproperlyConfigured
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -10,6 +11,18 @@ from rest_framework.response import Response
 from .models import CustomUser
 from .permissions import UserPermissions
 from .serializers import UserSerializer, PasswordResetSerializer
+
+with open("secret.json") as f:
+    secret = json.loads(f.read())
+
+
+def get_secret(secret_name, secrets=secret):
+    try:
+        return secrets[secret_name]
+
+    except:
+        msg = "This variable %s doesn't exist" % secret_name
+        return ImproperlyConfigured(msg)
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -33,7 +46,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
         send_mail(
             "Reset your password",
-            f"Use the following code to reset your password: {reset_code}. Access http://localhost:5173/?view=resetpassword to proceed.",
+            f"Use the following code to reset your password: {reset_code}. Access {get_secret('CORS_ALLOWED_ORIGINS')}/?view=resetpassword to proceed.",
             "from_email@example.com",
             [user.email],
             fail_silently=False,
@@ -48,10 +61,15 @@ class UserViewSet(viewsets.ModelViewSet):
             try:
                 user = CustomUser.objects.get(reset_code=reset_code)
             except CustomUser.DoesNotExist:
-                return Response({"detail": "Invalid reset code."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"detail": "Invalid reset code."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             user.set_password(serializer.validated_data["password"])
             user.reset_code = None
             user.save()
-            return Response({"message": "Password reset successfully.", "email": user.email})
+            return Response(
+                {"message": "Password reset successfully.", "email": user.email}
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
