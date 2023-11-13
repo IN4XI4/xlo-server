@@ -1,11 +1,19 @@
 from django.db import models
 
 
+class TopicTag(models.Model):
+    name = models.CharField(max_length=300)
+
+    def __str__(self):
+        return self.name
+
+
 class Topic(models.Model):
     title = models.CharField(max_length=300)
     subtitle = models.CharField(max_length=300, blank=True, null=True)
     color = models.CharField(max_length=50, blank=True, null=True)
     image = models.ImageField(upload_to="topics/", blank=True, null=True)
+    tag = models.ForeignKey(TopicTag, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return self.title

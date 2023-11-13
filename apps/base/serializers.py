@@ -1,6 +1,12 @@
 from rest_framework import serializers
 
-from .models import Topic, SoftSkill, Monster, Mentor
+from .models import TopicTag, Topic, SoftSkill, Monster, Mentor
+
+
+class TopicTagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TopicTag
+        fields = "__all__"
 
 
 class TopicSerializer(serializers.ModelSerializer):

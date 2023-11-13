@@ -1,12 +1,13 @@
 from django.urls import path, include
 from rest_framework import routers
 
-from .views import TopicsViewSet, SoftSkillsViewSet, MonstersViewSet, MentorsViewSet
+from .views import TopicTagsViewSet, TopicsViewSet, SoftSkillsViewSet, MonstersViewSet, MentorsViewSet
 
 
 app_name = "base"
 
 router = routers.DefaultRouter()
+router.register(r"topictags", TopicTagsViewSet, basename="topictags")
 router.register(r"topics", TopicsViewSet, basename="topics")
 router.register(r"softskills", SoftSkillsViewSet, basename="softskills")
 router.register(r"monsters", MonstersViewSet, basename="monsters")
