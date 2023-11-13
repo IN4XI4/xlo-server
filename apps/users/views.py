@@ -10,7 +10,7 @@ from rest_framework.response import Response
 
 from .models import CustomUser
 from .permissions import UserPermissions
-from .serializers import UserSerializer, PasswordResetSerializer
+from .serializers import UserSerializer, PasswordResetSerializer, UserMeSerializer
 
 with open("secret.json") as f:
     secret = json.loads(f.read())
@@ -69,7 +69,15 @@ class UserViewSet(viewsets.ModelViewSet):
             user.set_password(serializer.validated_data["password"])
             user.reset_code = None
             user.save()
-            return Response(
-                {"message": "Password reset successfully.", "email": user.email}
-            )
+            return Response({"message": "Password reset successfully.", "email": user.email})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=["get"], url_path="me")
+    def me(self, request, *args, **kwargs):
+        """
+        Return basic information about the authenticated user.
+        """
+        if not request.user.is_authenticated:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
+        serializer = UserMeSerializer(request.user, context={"request": request})
+        return Response(serializer.data)

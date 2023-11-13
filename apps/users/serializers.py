@@ -33,6 +33,20 @@ class UserSerializer(serializers.ModelSerializer):
         return user
 
 
+class UserMeSerializer(serializers.ModelSerializer):
+    picture = serializers.SerializerMethodField()
+
+    class Meta:
+        model = get_user_model()
+        fields = ["id", "username", "first_name", "email", "date_joined", "picture"]
+
+    def get_picture(self, obj):
+        if obj.profile_picture:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.profile_picture.url)
+        return None
+
+
 class PasswordResetSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         fields = ("password", "password2", "reset_code")
