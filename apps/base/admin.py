@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from .models import Topic, SoftSkill, Monster, Mentor
+from .models import TopicTag, Topic, SoftSkill, Monster, Mentor
+
+
+@admin.register(TopicTag)
+class TopicTagAdmin(admin.ModelAdmin):
+    search_fields = ("name",)
+    list_per_page = 100
 
 
 @admin.register(Topic)
