@@ -13,8 +13,8 @@ class StoryAdmin(admin.ModelAdmin):
 
 @admin.register(Card)
 class CardAdmin(admin.ModelAdmin):
-    list_display = ("title", "story", "monster", "mentor", "created_time")
-    list_filter = ("story", "monster", "mentor")
+    list_display = ("title", "story", "soft_skill", "mentor", "created_time")
+    list_filter = ("story", "soft_skill", "mentor")
     search_fields = ("title",)
     list_per_page = 50
 
