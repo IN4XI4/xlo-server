@@ -1,10 +1,10 @@
 from django.contrib import admin
 
-from .models import TopicTag, Topic, SoftSkill, Monster, Mentor
+from .models import TopicTag, Topic, SoftSkill, Mentor
 
 
 @admin.register(TopicTag)
-class TopicTagAdmin(admin.ModelAdmin):
+class CategoryAdmin(admin.ModelAdmin):
     search_fields = ("name",)
     list_per_page = 100
 
@@ -17,12 +17,6 @@ class TopicAdmin(admin.ModelAdmin):
 
 @admin.register(SoftSkill)
 class SoftSkillAdmin(admin.ModelAdmin):
-    search_fields = ("name",)
-    list_per_page = 100
-
-
-@admin.register(Monster)
-class MonsterAdmin(admin.ModelAdmin):
     search_fields = ("name",)
     list_per_page = 100
 

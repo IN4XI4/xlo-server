@@ -3,7 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 
 from apps.users.models import CustomUser
-from apps.base.models import Topic, Monster, Mentor
+from apps.base.models import Topic, SoftSkill, Mentor
 
 
 class Story(models.Model):
@@ -29,14 +29,13 @@ def card_image_upload_path(instance, filename):
 
 class Card(models.Model):
     story = models.ForeignKey(Story, on_delete=models.CASCADE)
-    monster = models.ForeignKey(Monster, on_delete=models.SET_NULL, blank=True, null=True)
+    soft_skill = models.ForeignKey(SoftSkill, on_delete=models.SET_NULL, blank=True, null=True)
     mentor = models.ForeignKey(Mentor, on_delete=models.SET_NULL, blank=True, null=True)
     title = models.CharField(max_length=300)
-    content = models.TextField()
     allow_comments = models.BooleanField(default=True)
-    image = models.ImageField(upload_to=card_image_upload_path, blank=True, null=True)
     created_time = models.DateField(auto_now=False, auto_now_add=True)
     updated_time = models.DateField(auto_now=True)
+    defense_color = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):
         return self.title
@@ -58,6 +57,7 @@ class Block(models.Model):
     block_type = models.ForeignKey(BlockType, on_delete=models.SET_NULL, blank=True, null=True)
     content = models.TextField()
     image = models.ImageField(upload_to=block_image_upload_path, blank=True, null=True)
+    order = models.IntegerField(default=0, blank=True)
 
     def __str__(self):
         return f"{self.card.title} - {self.block_type.name if self.block_type else 'No BlockType'}"

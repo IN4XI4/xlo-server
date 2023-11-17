@@ -100,7 +100,7 @@ class CardsViewSet(viewsets.ModelViewSet):
     filterset_fields = {
         "title": ("icontains",),
         "story": ("exact", "in"),
-        "monster": ("exact", "in"),
+        "soft_skill": ("exact", "in"),
         "mentor": ("exact", "in"),
         "created_time": ("gte", "lte"),
         "updated_time": ("gte", "lte"),
