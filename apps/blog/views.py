@@ -46,11 +46,10 @@ class StoriesViewSet(viewsets.ModelViewSet):
         Get the list of permissions that the current action should be checked against.
         """
         if self.action == "approve_story":
-            permission_classes = [IsStaffOrSuperUser]
+            permission_classes = [IsStaffOrSuperUser()]
         else:
             permission_classes = [permission() for permission in self.permission_classes]
-
-        return [permission() for permission in permission_classes]
+        return permission_classes
 
     def create(self, request, *args, **kwargs):
         """
