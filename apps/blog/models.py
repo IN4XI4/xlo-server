@@ -14,6 +14,7 @@ class Story(models.Model):
     is_active = models.BooleanField(default=False)
     created_time = models.DateTimeField(auto_now_add=True)
     updated_time = models.DateTimeField(auto_now=True)
+    views_count = models.IntegerField(default=0)
 
     def __str__(self):
         return self.title
@@ -21,6 +22,7 @@ class Story(models.Model):
     class Meta:
         verbose_name = "Story"
         verbose_name_plural = "Stories"
+        ordering = ['id']
 
 
 def card_image_upload_path(instance, filename):
