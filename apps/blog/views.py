@@ -1,3 +1,4 @@
+from django.db.models import F
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import viewsets, status, generics
 from rest_framework.decorators import action
@@ -8,6 +9,7 @@ from .models import Story, Card, BlockType, Block, Comment, Like
 from .permissions import StoryPermissions, CardPermissions, IsStaffOrSuperUser, BlockPermissions, CommentPermissions
 from .serializers import (
     StorySerializer,
+    StoryDetailSerializer,
     CardSerializer,
     CommentSerializer,
     LikeSerializer,
@@ -18,7 +20,6 @@ from .serializers import (
 
 
 class StoriesViewSet(viewsets.ModelViewSet):
-    serializer_class = StorySerializer
     parser_classes = (MultiPartParser,)
     permission_classes = [StoryPermissions]
     filterset_fields = {
@@ -30,6 +31,16 @@ class StoriesViewSet(viewsets.ModelViewSet):
         "user__username": ("icontains",),
         "is_active": ("exact",),
     }
+    ordering_fields = ["created_time",]
+    ordering = ["created_time",]
+
+    def get_serializer_class(self):
+        """
+        Return the class to use for the serializer.
+        """
+        if self.action in ["retrieve", "list"]:
+            return StoryDetailSerializer
+        return StorySerializer
 
     def get_queryset(self):
         """
@@ -39,18 +50,32 @@ class StoriesViewSet(viewsets.ModelViewSet):
         Returns:
         - QuerySet: A queryset of Story objects.
         """
-        return Story.objects.filter(is_active=True)
+        return Story.objects.filter(is_active=True).order_by("id")
 
     def get_permissions(self):
         """
         Get the list of permissions that the current action should be checked against.
         """
         if self.action == "approve_story":
-            permission_classes = [IsStaffOrSuperUser]
+            permission_classes = [IsStaffOrSuperUser()]
         else:
             permission_classes = [permission() for permission in self.permission_classes]
+        return permission_classes
 
-        return [permission() for permission in permission_classes]
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Retrieve a specific Story instance.
+
+        Args:
+        - request (Request): The HTTP request object.
+
+        Returns:
+        - Response: Serialized story data.
+        """
+        instance = self.get_object()
+        Story.objects.filter(pk=instance.pk).update(views_count=F("views_count") + 1)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
     def create(self, request, *args, **kwargs):
         """
