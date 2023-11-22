@@ -31,6 +31,8 @@ class StoriesViewSet(viewsets.ModelViewSet):
         "user__username": ("icontains",),
         "is_active": ("exact",),
     }
+    ordering_fields = ["created_time",]
+    ordering = ["created_time",]
 
     def get_serializer_class(self):
         """

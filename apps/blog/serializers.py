@@ -31,7 +31,6 @@ class StoryDetailSerializer(serializers.ModelSerializer):
         colors = (
             Card.objects.filter(story=obj, soft_skill__isnull=False)
             .values_list("soft_skill__color", flat=True)
-            .distinct()
         )
         return list(filter(None, colors))
 
