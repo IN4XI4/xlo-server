@@ -37,7 +37,6 @@ class Card(models.Model):
     allow_comments = models.BooleanField(default=True)
     created_time = models.DateField(auto_now=False, auto_now_add=True)
     updated_time = models.DateField(auto_now=True)
-    defense_color = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):
         return self.title

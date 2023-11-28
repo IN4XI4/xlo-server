@@ -38,6 +38,7 @@ class SoftSkill(models.Model):
 class Mentor(models.Model):
     name = models.CharField(max_length=100)
     job = models.CharField(max_length=100, blank=True, null=True)
+    color = models.CharField(max_length=50, blank=True, null=True)
     profile = models.TextField(blank=True, null=True)
     picture = models.ImageField(upload_to="mentors_pics/", null=True, blank=True)
 

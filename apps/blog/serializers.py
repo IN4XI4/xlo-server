@@ -12,6 +12,7 @@ class StorySerializer(serializers.ModelSerializer):
 
 
 class StoryDetailSerializer(serializers.ModelSerializer):
+    cards_count = serializers.SerializerMethodField()
     comments_count = serializers.SerializerMethodField()
     likes_count = serializers.SerializerMethodField()
     card_colors = serializers.SerializerMethodField()
@@ -21,6 +22,9 @@ class StoryDetailSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["is_active", "created_time", "updated_time", "user"]
 
+    def get_cards_count(self, obj):
+        return Card.objects.filter(story=obj).count()
+
     def get_comments_count(self, obj):
         return Comment.objects.filter(story=obj).count()
 
@@ -28,14 +32,21 @@ class StoryDetailSerializer(serializers.ModelSerializer):
         return Like.objects.filter(content_type__model="story", object_id=obj.id).count()
 
     def get_card_colors(self, obj):
-        colors = (
-            Card.objects.filter(story=obj, soft_skill__isnull=False)
-            .values_list("soft_skill__color", flat=True)
-        )
+        colors = Card.objects.filter(story=obj, soft_skill__isnull=False).values_list("soft_skill__color", flat=True)
         return list(filter(None, colors))
 
 
 class CardSerializer(serializers.ModelSerializer):
+    soft_skill_color = serializers.ReadOnlyField(source="soft_skill.color")
+    soft_skill_monster_name = serializers.ReadOnlyField(source="soft_skill.monster_name")
+    soft_skill_monster_picture = serializers.ImageField(
+        source="soft_skill.monster_picture", required=False, allow_null=True, use_url=True
+    )
+    mentor_color = serializers.ReadOnlyField(source="mentor.color")
+    mentor_name = serializers.ReadOnlyField(source="mentor.name")
+    mentor_job = serializers.ReadOnlyField(source="mentor.job")
+    mentor_picture = serializers.ImageField(source="mentor.picture", required=False, allow_null=True, use_url=True)
+
     class Meta:
         model = Card
         fields = "__all__"
@@ -49,6 +60,8 @@ class BlockTypeSerializer(serializers.ModelSerializer):
 
 
 class BlockSerializer(serializers.ModelSerializer):
+    block_type_name = serializers.ReadOnlyField(source="block_type.name")
+
     class Meta:
         model = Block
         fields = "__all__"

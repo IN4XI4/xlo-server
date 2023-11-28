@@ -129,10 +129,8 @@ class CardsViewSet(viewsets.ModelViewSet):
         "mentor": ("exact", "in"),
         "created_time": ("gte", "lte"),
         "updated_time": ("gte", "lte"),
-        "user": ("exact",),
-        "user__username": ("icontains",),
-        "is_active": ("exact",),
     }
+    
 
     def get_queryset(self):
         """
@@ -142,7 +140,7 @@ class CardsViewSet(viewsets.ModelViewSet):
         Returns:
         - QuerySet: A queryset of Card objects.
         """
-        return Card.objects.filter(is_active=True)
+        return Card.objects.all()
 
 
 class BlockTypesViewSet(viewsets.ReadOnlyModelViewSet):
@@ -162,6 +160,8 @@ class BlocksViewSet(viewsets.ModelViewSet):
         "card__story": ("exact", "in"),
         "block_type": ("exact", "in"),
     }
+    ordering_fields = ["order",]
+    ordering = ["order",]
 
 
 class CommentsViewSet(viewsets.ModelViewSet):
