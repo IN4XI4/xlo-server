@@ -67,10 +67,11 @@ class Block(models.Model):
 class Comment(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, null=True, blank=True)
     story = models.ForeignKey(Story, on_delete=models.CASCADE)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
     comment_text = models.CharField(max_length=250)
     is_active = models.BooleanField(default=False)
-    created_time = models.DateField(auto_now=False, auto_now_add=True)
-    updated_time = models.DateField(auto_now=True)
+    created_time = models.DateTimeField(auto_now=False, auto_now_add=True)
+    updated_time = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.comment_text
