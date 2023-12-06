@@ -35,16 +35,22 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserMeSerializer(serializers.ModelSerializer):
     picture = serializers.SerializerMethodField()
+    is_commentor = serializers.SerializerMethodField()
 
     class Meta:
         model = get_user_model()
-        fields = ["id", "username", "first_name", "email", "date_joined", "picture"]
+        fields = ["id", "username", "first_name", "email", "date_joined", "picture", "is_commentor"]
 
     def get_picture(self, obj):
         if obj.profile_picture:
             request = self.context.get("request")
             return request.build_absolute_uri(obj.profile_picture.url)
         return None
+
+    def get_is_commentor(self, obj):
+        if obj.groups.filter(name__in=["commentor", "creator"]).exists():
+            return True
+        return obj.is_staff or obj.is_superuser
 
 
 class PasswordResetSerializer(UserSerializer):

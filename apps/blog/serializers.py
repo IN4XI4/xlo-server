@@ -68,10 +68,21 @@ class BlockSerializer(serializers.ModelSerializer):
 
 
 class CommentSerializer(serializers.ModelSerializer):
+    replies_count = serializers.SerializerMethodField()
+    user_name = serializers.ReadOnlyField(source="user.first_name")
+    user_picture = serializers.ImageField(source="user.profile_picture", required=False, allow_null=True, use_url=True)
+    formatted_created_time = serializers.SerializerMethodField()
+
     class Meta:
         model = Comment
         fields = "__all__"
         read_only_fields = ["is_active", "created_time", "updated_time", "user"]
+
+    def get_replies_count(self, obj):
+        return Comment.objects.filter(parent=obj).count()
+
+    def get_formatted_created_time(self, obj):
+        return obj.created_time.strftime("%H:%M %B %d, %Y")
 
 
 class LikeSerializer(serializers.ModelSerializer):

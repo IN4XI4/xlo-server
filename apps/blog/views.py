@@ -174,6 +174,7 @@ class CommentsViewSet(viewsets.ModelViewSet):
         "created_time": ("gte", "lte"),
         "updated_time": ("gte", "lte"),
         "is_active": ("exact",),
+        "parent": ("exact",),
     }
 
     def get_queryset(self):
