@@ -177,8 +177,11 @@ class CommentsViewSet(viewsets.ModelViewSet):
         "parent": ("exact",),
     }
 
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
     def get_queryset(self):
-        return Comment.objects.filter(is_active=True)
+        return Comment.objects.filter(is_active=True).order_by("id")
 
 
 class LikesViewSet(viewsets.ModelViewSet):
