@@ -26,7 +26,7 @@ class StoryDetailSerializer(serializers.ModelSerializer):
         return Card.objects.filter(story=obj).count()
 
     def get_comments_count(self, obj):
-        return Comment.objects.filter(story=obj).count()
+        return Comment.objects.filter(story=obj, is_active=True).count()
 
     def get_likes_count(self, obj):
         return Like.objects.filter(content_type__model="story", object_id=obj.id).count()
@@ -76,10 +76,10 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = "__all__"
-        read_only_fields = ["is_active", "created_time", "updated_time", "user"]
+        read_only_fields = ["created_time", "updated_time", "user"]
 
     def get_replies_count(self, obj):
-        return Comment.objects.filter(parent=obj).count()
+        return Comment.objects.filter(parent=obj, is_active=True).count()
 
     def get_formatted_created_time(self, obj):
         return obj.created_time.strftime("%H:%M %B %d, %Y")
@@ -89,7 +89,7 @@ class LikeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Like
         fields = "__all__"
-        read_only_fields = ["is_active", "created_time", "updated_time"]
+        read_only_fields = ["created_time", "updated_time"]
 
 
 class ContentTypeSerializer(serializers.ModelSerializer):
