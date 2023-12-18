@@ -1,4 +1,3 @@
-from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
 from .models import Story, Card, BlockType, Block, Comment, Like
@@ -90,9 +89,3 @@ class LikeSerializer(serializers.ModelSerializer):
         model = Like
         fields = "__all__"
         read_only_fields = ["created_time", "updated_time"]
-
-
-class ContentTypeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ContentType
-        fields = "__all__"

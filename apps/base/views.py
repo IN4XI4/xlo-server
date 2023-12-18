@@ -1,13 +1,19 @@
-from rest_framework import viewsets
+from django.contrib.contenttypes.models import ContentType
+from rest_framework import viewsets, generics, permissions
 from rest_framework.permissions import IsAuthenticated
 
-
 from .models import TopicTag, Topic, SoftSkill, Mentor
-from .serializers import TopicTagSerializer, TopicSerializer, SoftSkillSerializer, MentorSerializer
+from .serializers import (
+    TopicTagSerializer,
+    TopicSerializer,
+    SoftSkillSerializer,
+    MentorSerializer,
+    ContentTypeSerializer,
+)
 
 
 class TopicTagsViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = TopicTag.objects.all().order_by('id')
+    queryset = TopicTag.objects.all().order_by("id")
     serializer_class = TopicTagSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = {
@@ -16,7 +22,7 @@ class TopicTagsViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class TopicsViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Topic.objects.all().order_by('id')
+    queryset = Topic.objects.all().order_by("id")
     serializer_class = TopicSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = {
@@ -26,7 +32,7 @@ class TopicsViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class SoftSkillsViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = SoftSkill.objects.all().order_by('id')
+    queryset = SoftSkill.objects.all().order_by("id")
     serializer_class = SoftSkillSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = {
@@ -35,9 +41,16 @@ class SoftSkillsViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class MentorsViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Mentor.objects.all().order_by('id')
+    queryset = Mentor.objects.all().order_by("id")
     serializer_class = MentorSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = {
         "name": ("exact", "icontains"),
     }
+
+
+class ContentTypeListView(generics.ListAPIView):
+    queryset = ContentType.objects.all()
+    serializer_class = ContentTypeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None
