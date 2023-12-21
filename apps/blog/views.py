@@ -1,6 +1,6 @@
 from django.db.models import F
-from django.contrib.contenttypes.models import ContentType
-from rest_framework import viewsets, status, generics
+
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -13,7 +13,6 @@ from .serializers import (
     CardSerializer,
     CommentSerializer,
     LikeSerializer,
-    ContentTypeSerializer,
     BlockTypeSerializer,
     BlockSerializer,
 )
@@ -31,8 +30,12 @@ class StoriesViewSet(viewsets.ModelViewSet):
         "user__username": ("icontains",),
         "is_active": ("exact",),
     }
-    ordering_fields = ["created_time",]
-    ordering = ["created_time",]
+    ordering_fields = [
+        "created_time",
+    ]
+    ordering = [
+        "created_time",
+    ]
 
     def get_serializer_class(self):
         """
@@ -130,7 +133,6 @@ class CardsViewSet(viewsets.ModelViewSet):
         "created_time": ("gte", "lte"),
         "updated_time": ("gte", "lte"),
     }
-    
 
     def get_queryset(self):
         """
@@ -160,8 +162,12 @@ class BlocksViewSet(viewsets.ModelViewSet):
         "card__story": ("exact", "in"),
         "block_type": ("exact", "in"),
     }
-    ordering_fields = ["order",]
-    ordering = ["order",]
+    ordering_fields = [
+        "order",
+    ]
+    ordering = [
+        "order",
+    ]
 
 
 class CommentsViewSet(viewsets.ModelViewSet):
@@ -176,6 +182,12 @@ class CommentsViewSet(viewsets.ModelViewSet):
         "is_active": ("exact",),
         "parent": ("exact", "isnull"),
     }
+    ordering_fields = [
+        "created_time",
+    ]
+    ordering = [
+        "created_time",
+    ]
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -183,6 +195,8 @@ class CommentsViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Comment.objects.filter(is_active=True).order_by("id")
 
+    def get_serializer_context(self):
+        return {'request': self.request}
 
 class LikesViewSet(viewsets.ModelViewSet):
     serializer_class = LikeSerializer
@@ -196,7 +210,5 @@ class LikesViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Like.objects.filter(is_active=True)
 
-
-class ContentTypeListView(generics.ListAPIView):
-    queryset = ContentType.objects.all()
-    serializer_class = ContentTypeSerializer
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

@@ -8,7 +8,6 @@ from .views import (
     BlocksViewSet,
     CommentsViewSet,
     LikesViewSet,
-    ContentTypeListView,
 )
 
 
@@ -25,5 +24,5 @@ router.register(r"blocks", BlocksViewSet, basename="blocks")
 
 urlpatterns = [
     path("", include(router.urls)),
-    path("contenttypes/", ContentTypeListView.as_view(), name="contenttype-list"),
+    
 ]
