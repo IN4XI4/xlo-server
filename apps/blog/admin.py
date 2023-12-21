@@ -34,7 +34,7 @@ class BlockAdmin(admin.ModelAdmin):
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
-    list_display = ("comment_text", "story", "user", "is_active", "created_time", "updated_time")
+    list_display = ("id", "comment_text", "story", "user", "is_active", "created_time", "updated_time")
     list_filter = ("user__username", "story", "is_active")
     search_fields = ("comment_text", "user__username")
     list_per_page = 100

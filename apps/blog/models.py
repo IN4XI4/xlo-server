@@ -1,9 +1,29 @@
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
-from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
+
 
 from apps.users.models import CustomUser
 from apps.base.models import Topic, SoftSkill, Mentor
+
+
+class Like(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, null=True, blank=True)
+    liked = models.BooleanField(default=True)
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content = GenericForeignKey("content_type", "object_id")
+    is_active = models.BooleanField(default=False)
+    created_time = models.DateField(auto_now=False, auto_now_add=True)
+    updated_time = models.DateField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "content_type", "object_id"], name="unique_like"),
+        ]
+
+    def __str__(self):
+        return str(self.object_id)
 
 
 class Story(models.Model):
@@ -22,7 +42,7 @@ class Story(models.Model):
     class Meta:
         verbose_name = "Story"
         verbose_name_plural = "Stories"
-        ordering = ['id']
+        ordering = ["id"]
 
 
 def card_image_upload_path(instance, filename):
@@ -67,30 +87,12 @@ class Block(models.Model):
 class Comment(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, null=True, blank=True)
     story = models.ForeignKey(Story, on_delete=models.CASCADE)
-    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
+    parent = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True, related_name="replies")
     comment_text = models.CharField(max_length=250)
     is_active = models.BooleanField(default=False)
     created_time = models.DateTimeField(auto_now=False, auto_now_add=True)
     updated_time = models.DateTimeField(auto_now=True)
+    likes = GenericRelation(Like)
 
     def __str__(self):
         return self.comment_text
-
-
-class Like(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, null=True, blank=True)
-    liked = models.BooleanField(default=True)
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
-    content = GenericForeignKey("content_type", "object_id")
-    is_active = models.BooleanField(default=False)
-    created_time = models.DateField(auto_now=False, auto_now_add=True)
-    updated_time = models.DateField(auto_now=True)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["user", "content_type", "object_id"], name="unique_like"),
-        ]
-
-    def __str__(self):
-        return str(self.object_id)

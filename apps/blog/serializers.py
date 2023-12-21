@@ -1,3 +1,4 @@
+from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
 from .models import Story, Card, BlockType, Block, Comment, Like
@@ -71,6 +72,7 @@ class CommentSerializer(serializers.ModelSerializer):
     user_name = serializers.ReadOnlyField(source="user.first_name")
     user_picture = serializers.ImageField(source="user.profile_picture", required=False, allow_null=True, use_url=True)
     formatted_created_time = serializers.SerializerMethodField()
+    user_has_liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
@@ -83,9 +85,21 @@ class CommentSerializer(serializers.ModelSerializer):
     def get_formatted_created_time(self, obj):
         return obj.created_time.strftime("%H:%M %B %d, %Y")
 
+    def get_user_has_liked(self, obj):
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return False
+        content_type = ContentType.objects.get_for_model(obj)
+        return Like.objects.filter(
+            user=user, 
+            content_type=content_type.id, 
+            object_id=obj.id,
+            is_active=True
+        ).exists()
+
 
 class LikeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Like
         fields = "__all__"
-        read_only_fields = ["created_time", "updated_time"]
+        read_only_fields = ["created_time", "updated_time", "user"]
