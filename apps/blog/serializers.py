@@ -90,12 +90,13 @@ class CommentSerializer(serializers.ModelSerializer):
         if user.is_anonymous:
             return False
         content_type = ContentType.objects.get_for_model(obj)
-        return Like.objects.filter(
+        like = Like.objects.filter(
             user=user, 
             content_type=content_type.id, 
             object_id=obj.id,
             is_active=True
-        ).exists()
+        ).first()
+        return like.id if like else False
 
 
 class LikeSerializer(serializers.ModelSerializer):
