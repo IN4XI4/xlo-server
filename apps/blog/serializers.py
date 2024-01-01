@@ -46,11 +46,23 @@ class CardSerializer(serializers.ModelSerializer):
     mentor_name = serializers.ReadOnlyField(source="mentor.name")
     mentor_job = serializers.ReadOnlyField(source="mentor.job")
     mentor_picture = serializers.ImageField(source="mentor.picture", required=False, allow_null=True, use_url=True)
+    user_has_liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Card
         fields = "__all__"
         read_only_fields = ["created_time", "updated_time"]
+
+    def get_user_has_liked(self, obj):
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return {"liked": False, "disliked": False, "like_id": None}
+        content_type = ContentType.objects.get_for_model(obj)
+        like = Like.objects.filter(user=user, content_type=content_type.id, object_id=obj.id, is_active=True).first()
+        if like:
+            return {"liked": like.liked, "disliked": not like.liked, "like_id": like.id}
+        else:
+            return {"liked": False, "disliked": False, "like_id": None}
 
 
 class BlockTypeSerializer(serializers.ModelSerializer):
@@ -61,10 +73,19 @@ class BlockTypeSerializer(serializers.ModelSerializer):
 
 class BlockSerializer(serializers.ModelSerializer):
     block_type_name = serializers.ReadOnlyField(source="block_type.name")
+    user_has_liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Block
         fields = "__all__"
+
+    def get_user_has_liked(self, obj):
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return False
+        content_type = ContentType.objects.get_for_model(obj)
+        like = Like.objects.filter(user=user, content_type=content_type.id, object_id=obj.id, is_active=True).first()
+        return like.id if like else False
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -90,12 +111,7 @@ class CommentSerializer(serializers.ModelSerializer):
         if user.is_anonymous:
             return False
         content_type = ContentType.objects.get_for_model(obj)
-        like = Like.objects.filter(
-            user=user, 
-            content_type=content_type.id, 
-            object_id=obj.id,
-            is_active=True
-        ).first()
+        like = Like.objects.filter(user=user, content_type=content_type.id, object_id=obj.id, is_active=True).first()
         return like.id if like else False
 
 

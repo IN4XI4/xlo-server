@@ -169,6 +169,9 @@ class BlocksViewSet(viewsets.ModelViewSet):
         "order",
     ]
 
+    def get_serializer_context(self):
+        return {"request": self.request}
+
 
 class CommentsViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
@@ -196,7 +199,8 @@ class CommentsViewSet(viewsets.ModelViewSet):
         return Comment.objects.filter(is_active=True).order_by("id")
 
     def get_serializer_context(self):
-        return {'request': self.request}
+        return {"request": self.request}
+
 
 class LikesViewSet(viewsets.ModelViewSet):
     serializer_class = LikeSerializer
