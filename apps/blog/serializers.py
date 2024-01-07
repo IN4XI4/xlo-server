@@ -16,6 +16,7 @@ class StoryDetailSerializer(serializers.ModelSerializer):
     comments_count = serializers.SerializerMethodField()
     likes_count = serializers.SerializerMethodField()
     card_colors = serializers.SerializerMethodField()
+    user_has_liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Story
@@ -29,11 +30,22 @@ class StoryDetailSerializer(serializers.ModelSerializer):
         return Comment.objects.filter(story=obj, is_active=True).count()
 
     def get_likes_count(self, obj):
-        return Like.objects.filter(content_type__model="story", object_id=obj.id).count()
+        return Like.objects.filter(content_type__model="story", object_id=obj.id, liked=True).count()
 
     def get_card_colors(self, obj):
         colors = Card.objects.filter(story=obj, soft_skill__isnull=False).values_list("soft_skill__color", flat=True)
         return list(filter(None, colors))
+
+    def get_user_has_liked(self, obj):
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return {"liked": False, "disliked": False, "like_id": None}
+        content_type = ContentType.objects.get_for_model(obj)
+        like = Like.objects.filter(user=user, content_type=content_type.id, object_id=obj.id, is_active=True).first()
+        if like:
+            return {"liked": like.liked, "disliked": not like.liked, "like_id": like.id}
+        else:
+            return {"liked": False, "disliked": False, "like_id": None}
 
 
 class CardSerializer(serializers.ModelSerializer):
@@ -46,23 +58,13 @@ class CardSerializer(serializers.ModelSerializer):
     mentor_name = serializers.ReadOnlyField(source="mentor.name")
     mentor_job = serializers.ReadOnlyField(source="mentor.job")
     mentor_picture = serializers.ImageField(source="mentor.picture", required=False, allow_null=True, use_url=True)
-    user_has_liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Card
         fields = "__all__"
         read_only_fields = ["created_time", "updated_time"]
 
-    def get_user_has_liked(self, obj):
-        user = self.context["request"].user
-        if user.is_anonymous:
-            return {"liked": False, "disliked": False, "like_id": None}
-        content_type = ContentType.objects.get_for_model(obj)
-        like = Like.objects.filter(user=user, content_type=content_type.id, object_id=obj.id, is_active=True).first()
-        if like:
-            return {"liked": like.liked, "disliked": not like.liked, "like_id": like.id}
-        else:
-            return {"liked": False, "disliked": False, "like_id": None}
+
 
 
 class BlockTypeSerializer(serializers.ModelSerializer):
