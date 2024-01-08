@@ -53,6 +53,13 @@ class UserMeSerializer(serializers.ModelSerializer):
         return obj.is_staff or obj.is_superuser
 
 
+class CompleteUserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = get_user_model()
+        fields = "__all__"
+
+
 class PasswordResetSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         fields = ("password", "password2", "reset_code")

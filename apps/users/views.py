@@ -10,7 +10,7 @@ from rest_framework.response import Response
 
 from .models import CustomUser
 from .permissions import UserPermissions
-from .serializers import UserSerializer, PasswordResetSerializer, UserMeSerializer
+from .serializers import UserSerializer, PasswordResetSerializer, UserMeSerializer, CompleteUserSerializer
 
 with open("secret.json") as f:
     secret = json.loads(f.read())
@@ -80,4 +80,14 @@ class UserViewSet(viewsets.ModelViewSet):
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
         serializer = UserMeSerializer(request.user, context={"request": request})
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="profile")
+    def profile(self, request, *args, **kwargs):
+        """
+        Return all information about the authenticated user.
+        """
+        if not request.user.is_authenticated:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
+        serializer = CompleteUserSerializer(request.user, context={"request": request})
         return Response(serializer.data)
