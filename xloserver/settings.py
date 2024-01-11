@@ -37,7 +37,7 @@ SECRET_KEY = get_secret('SECRET_KEY')
 DEBUG = get_secret('DEBUG')
 
 
-ALLOWED_HOSTS = ['15.237.210.201', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['13.36.234.62', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -161,7 +161,7 @@ MEDIA_URL = '/media/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-CORS_ALLOWED_ORIGINS = [get_secret('CORS_ALLOWED_ORIGINS')]
+CORS_ALLOWED_ORIGINS = get_secret('CORS_ALLOWED_ORIGINS')
 
 # Email config:
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
