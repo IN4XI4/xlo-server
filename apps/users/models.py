@@ -43,6 +43,10 @@ class Gender(models.Model):
 class Experience(models.Model):
     experience = models.CharField(max_length=50)
 
+    class Meta:
+        verbose_name = "Experience"
+        verbose_name_plural = "Experience"
+
     def __str__(self):
         return str(self.experience)
 

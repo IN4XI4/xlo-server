@@ -1,28 +1,52 @@
-import json
 import random
 import string
 
 from django.core.mail import send_mail
-from django.core.exceptions import ObjectDoesNotExist, ImproperlyConfigured
+from django.core.exceptions import ObjectDoesNotExist
+from django_countries import countries
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 
-from .models import CustomUser
+from .models import CustomUser, ProfileColor, Experience, Gender
 from .permissions import UserPermissions
-from .serializers import UserSerializer, PasswordResetSerializer, UserMeSerializer, CompleteUserSerializer
+from .serializers import (
+    UserSerializer,
+    PasswordResetSerializer,
+    UserMeSerializer,
+    CompleteUserSerializer,
+    ProfileColorSerializer,
+    ExperienceSerializer,
+    GenderSerializer,
+)
 
-with open("secret.json") as f:
-    secret = json.loads(f.read())
+
+class CountryListView(APIView):
+    def get(self, request, *args, **kwargs):
+        return Response(countries)
 
 
-def get_secret(secret_name, secrets=secret):
-    try:
-        return secrets[secret_name]
+class ProfileColorViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = ProfileColor.objects.all().order_by("id")
+    serializer_class = ProfileColorSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
 
-    except:
-        msg = "This variable %s doesn't exist" % secret_name
-        return ImproperlyConfigured(msg)
+
+class ExperienceViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Experience.objects.all().order_by("id")
+    serializer_class = ExperienceSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+
+
+class GenderViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Gender.objects.all().order_by("id")
+    serializer_class = GenderSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -46,7 +70,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
         send_mail(
             "Reset your password",
-            f"Use the following code to reset your password: {reset_code}. Access {get_secret('CORS_ALLOWED_ORIGINS')}/?view=resetpassword to proceed.",
+            f"Use the following code to reset your password: {reset_code}. Access http://www.mixelo.io/?view=resetpassword to proceed.",
             "from_email@example.com",
             [user.email],
             fail_silently=False,

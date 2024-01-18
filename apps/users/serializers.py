@@ -1,5 +1,26 @@
 from django.contrib.auth import get_user_model
+from django_countries.serializer_fields import CountryField
 from rest_framework import serializers
+
+from .models import ProfileColor, Experience, Gender
+
+
+class ProfileColorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProfileColor
+        fields = "__all__"
+
+
+class ExperienceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Experience
+        fields = "__all__"
+
+
+class GenderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Gender
+        fields = "__all__"
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -54,6 +75,7 @@ class UserMeSerializer(serializers.ModelSerializer):
 
 
 class CompleteUserSerializer(serializers.ModelSerializer):
+    country = CountryField(name_only=True)
 
     class Meta:
         model = get_user_model()
