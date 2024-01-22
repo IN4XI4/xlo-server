@@ -41,7 +41,7 @@ if not DEBUG:
     USE_X_FORWARDED_HOST = True
     SECURE_SSL_REDIRECT = True
 
-ALLOWED_HOSTS = ['15.237.210.201', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['api.mixelo.io', '15.237.210.201', 'localhost', '127.0.0.1']
 
 
 # Application definition
