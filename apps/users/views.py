@@ -3,6 +3,7 @@ import string
 
 from django.core.mail import send_mail
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.files.storage import default_storage
 from django_countries import countries
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -53,6 +54,25 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
     permission_classes = [UserPermissions]
+
+    def get_serializer_class(self):
+        """
+        Devuelve un serializer diferente según el tipo de acción.
+        """
+        if self.action in ["update", "partial_update"]:
+            return CompleteUserSerializer
+        return UserSerializer
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+
+        if instance.profile_picture and instance.profile_picture != serializer.validated_data.get(
+            "profile_picture", None
+        ):
+            if default_storage.exists(instance.profile_picture.name):
+                default_storage.delete(instance.profile_picture.name)
+
+        serializer.save()
 
     @action(detail=False, methods=["post"])
     def send_reset_code(self, request, pk=None):
