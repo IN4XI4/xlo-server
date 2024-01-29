@@ -1,34 +1,79 @@
-import json
 import random
 import string
 
 from django.core.mail import send_mail
-from django.core.exceptions import ObjectDoesNotExist, ImproperlyConfigured
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.files.storage import default_storage
+from django_countries import countries
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 
-from .models import CustomUser
+from .models import CustomUser, ProfileColor, Experience, Gender
 from .permissions import UserPermissions
-from .serializers import UserSerializer, PasswordResetSerializer, UserMeSerializer
+from .serializers import (
+    UserSerializer,
+    PasswordResetSerializer,
+    UserMeSerializer,
+    CompleteUserSerializer,
+    ProfileColorSerializer,
+    ExperienceSerializer,
+    GenderSerializer,
+)
 
-with open("secret.json") as f:
-    secret = json.loads(f.read())
+
+class CountryListView(APIView):
+    def get(self, request, *args, **kwargs):
+        return Response(countries)
 
 
-def get_secret(secret_name, secrets=secret):
-    try:
-        return secrets[secret_name]
+class ProfileColorViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = ProfileColor.objects.all().order_by("id")
+    serializer_class = ProfileColorSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
 
-    except:
-        msg = "This variable %s doesn't exist" % secret_name
-        return ImproperlyConfigured(msg)
+
+class ExperienceViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Experience.objects.all().order_by("id")
+    serializer_class = ExperienceSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+
+
+class GenderViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Gender.objects.all().order_by("id")
+    serializer_class = GenderSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
 
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
     permission_classes = [UserPermissions]
+
+    def get_serializer_class(self):
+        """
+        Devuelve un serializer diferente según el tipo de acción.
+        """
+        if self.action in ["update", "partial_update"]:
+            return CompleteUserSerializer
+        return UserSerializer
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+
+        if "profile_picture" in serializer.validated_data.keys():
+            if instance.profile_picture and instance.profile_picture != serializer.validated_data.get(
+                "profile_picture"
+            ):
+                if default_storage.exists(instance.profile_picture.name):
+                    default_storage.delete(instance.profile_picture.name)
+
+        serializer.save()
 
     @action(detail=False, methods=["post"])
     def send_reset_code(self, request, pk=None):
@@ -46,7 +91,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
         send_mail(
             "Reset your password",
-            f"Use the following code to reset your password: {reset_code}. Access {get_secret('CORS_ALLOWED_ORIGINS')}/?view=resetpassword to proceed.",
+            f"Use the following code to reset your password: {reset_code}. Access http://www.mixelo.io/?view=resetpassword to proceed.",
             "from_email@example.com",
             [user.email],
             fail_silently=False,
@@ -80,4 +125,14 @@ class UserViewSet(viewsets.ModelViewSet):
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
         serializer = UserMeSerializer(request.user, context={"request": request})
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="profile")
+    def profile(self, request, *args, **kwargs):
+        """
+        Return all information about the authenticated user.
+        """
+        if not request.user.is_authenticated:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
+        serializer = CompleteUserSerializer(request.user, context={"request": request})
         return Response(serializer.data)
