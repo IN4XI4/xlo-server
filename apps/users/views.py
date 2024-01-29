@@ -66,11 +66,12 @@ class UserViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         instance = self.get_object()
 
-        if instance.profile_picture and instance.profile_picture != serializer.validated_data.get(
-            "profile_picture", None
-        ):
-            if default_storage.exists(instance.profile_picture.name):
-                default_storage.delete(instance.profile_picture.name)
+        if "profile_picture" in serializer.validated_data.keys():
+            if instance.profile_picture and instance.profile_picture != serializer.validated_data.get(
+                "profile_picture"
+            ):
+                if default_storage.exists(instance.profile_picture.name):
+                    default_storage.delete(instance.profile_picture.name)
 
         serializer.save()
 
