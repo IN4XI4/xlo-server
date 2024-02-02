@@ -1,6 +1,8 @@
+import re
 import random
 import string
 
+from django.conf import settings
 from django.core.mail import send_mail
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.storage import default_storage
@@ -92,7 +94,7 @@ class UserViewSet(viewsets.ModelViewSet):
         send_mail(
             "Reset your password",
             f"Use the following code to reset your password: {reset_code}. Access http://www.mixelo.io/?view=resetpassword to proceed.",
-            "from_email@example.com",
+            settings.EMAIL_HOST_USER,
             [user.email],
             fail_silently=False,
         )
@@ -136,3 +138,37 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_401_UNAUTHORIZED)
         serializer = CompleteUserSerializer(request.user, context={"request": request})
         return Response(serializer.data)
+
+    @action(detail=False, methods=["post"])
+    def update_password(self, request):
+        user = request.user
+        if not user.is_authenticated:
+            return Response({"error": "Authentication required."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        current_password = request.data.get("current_password")
+        new_password = request.data.get("password")
+        confirm_password = request.data.get("confirm_password")
+
+        if not user.check_password(current_password):
+            return Response({"error": "Current password is incorrect."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if new_password != confirm_password:
+            return Response(
+                {"error": "Password and confirm password do not match."}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if (
+            len(new_password) < 10
+            or len(new_password) > 100
+            or not re.search("[a-z]", new_password)
+            or not re.search("[!@#?]", new_password)
+        ):
+            return Response(
+                {"error": "New password does not meet the security requirements."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"message": "Password updated successfully."})
