@@ -94,7 +94,7 @@ class UserViewSet(viewsets.ModelViewSet):
         send_mail(
             "Reset your password",
             f"Use the following code to reset your password: {reset_code}. Access http://www.mixelo.io/?view=resetpassword to proceed.",
-            settings.DEFAULT_FROM_EMAIL,
+            settings.EMAIL_HOST_USER,
             [user.email],
             fail_silently=False,
         )
