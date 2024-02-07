@@ -93,7 +93,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
         send_mail(
             "Reset your password",
-            f"Use the following code to reset your password: {reset_code}. Access http://www.mixelo.io/?view=resetpassword to proceed.",
+            f"Use the following code to reset your password: {reset_code}. Access https://www.mixelo.io/?view=resetpassword to proceed.",
             settings.DEFAULT_FROM_EMAIL,
             [user.email],
             fail_silently=False,
@@ -139,7 +139,7 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = CompleteUserSerializer(request.user, context={"request": request})
         return Response(serializer.data)
 
-    @action(detail=False, methods=["post"])
+    @action(detail=False, methods=["put"])
     def update_password(self, request):
         user = request.user
         if not user.is_authenticated:
