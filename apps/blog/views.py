@@ -4,6 +4,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 
 from .models import Story, Card, BlockType, Block, Comment, Like
 from .permissions import StoryPermissions, CardPermissions, IsStaffOrSuperUser, BlockPermissions, CommentPermissions
@@ -153,10 +154,15 @@ class BlockTypesViewSet(viewsets.ReadOnlyModelViewSet):
     }
 
 
+class BlocksPagination(PageNumberPagination):
+    page_size = 15
+
+
 class BlocksViewSet(viewsets.ModelViewSet):
     queryset = Block.objects.all()
     serializer_class = BlockSerializer
     permission_classes = [BlockPermissions]
+    pagination_class = BlocksPagination
     filterset_fields = {
         "card": ("exact", "in"),
         "card__story": ("exact", "in"),
