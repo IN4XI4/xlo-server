@@ -8,6 +8,7 @@ from .views import (
     BlocksViewSet,
     CommentsViewSet,
     LikesViewSet,
+    UserStoryViewCreate
 )
 
 
@@ -24,5 +25,5 @@ router.register(r"blocks", BlocksViewSet, basename="blocks")
 
 urlpatterns = [
     path("", include(router.urls)),
-    
+    path("user-view-story/", UserStoryViewCreate.as_view(), name="user-view-story"),
 ]

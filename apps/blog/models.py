@@ -14,8 +14,8 @@ class Like(models.Model):
     object_id = models.PositiveIntegerField()
     content = GenericForeignKey("content_type", "object_id")
     is_active = models.BooleanField(default=False)
-    created_time = models.DateField(auto_now=False, auto_now_add=True)
-    updated_time = models.DateField(auto_now=True)
+    created_time = models.DateTimeField(auto_now=False, auto_now_add=True)
+    updated_time = models.DateTimeField(auto_now=True)
 
     class Meta:
         constraints = [
@@ -96,3 +96,11 @@ class Comment(models.Model):
 
     def __str__(self):
         return self.comment_text
+
+
+class UserStoryView(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    story = models.ForeignKey(Story, on_delete=models.CASCADE, related_name="user_views")
+
+    class Meta:
+        unique_together = ("user", "story")

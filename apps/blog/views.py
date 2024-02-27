@@ -1,12 +1,14 @@
-from django.db.models import F
-
+from django.db.models import F, OuterRef, Subquery
+from django.shortcuts import get_object_or_404
+from django.contrib.contenttypes.models import ContentType
 from rest_framework import viewsets, status
+from rest_framework.generics import CreateAPIView
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 
-from .models import Story, Card, BlockType, Block, Comment, Like
+from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView
 from .permissions import StoryPermissions, CardPermissions, IsStaffOrSuperUser, BlockPermissions, CommentPermissions
 from .serializers import (
     StorySerializer,
@@ -16,7 +18,9 @@ from .serializers import (
     LikeSerializer,
     BlockTypeSerializer,
     BlockSerializer,
+    UserStoryViewSerializer,
 )
+from apps.base.models import Topic
 
 
 class StoriesViewSet(viewsets.ModelViewSet):
@@ -121,6 +125,41 @@ class StoriesViewSet(viewsets.ModelViewSet):
         story.save()
         return Response({"message": "Story approved"}, status=status.HTTP_202_ACCEPTED)
 
+    @action(detail=False, methods=["get"])
+    def liked_topics_stories(self, request):
+        topic_content_type = ContentType.objects.get_for_model(Topic)
+        likes_subquery = Like.objects.filter(
+            user_id=request.user.id,
+            liked=True,
+            content_type=topic_content_type,
+            object_id=OuterRef("topic_id"),
+            is_active=True,
+        ).values("created_time")[:1]
+
+        order = request.query_params.get("order", "desc")
+        search_query = request.query_params.get("search", None)
+
+        order_criteria = "-created_time" if order == "desc" else "created_time"
+        print(order_criteria)
+        stories_queryset = Story.objects.filter(
+            topic_id__in=Like.objects.filter(
+                user=request.user, liked=True, content_type=topic_content_type, is_active=True
+            ).values_list("object_id", flat=True),
+            created_time__gt=Subquery(likes_subquery),
+            is_active=True,
+        )
+        if search_query:
+            stories_queryset = stories_queryset.filter(title__icontains=search_query)
+        stories_queryset = stories_queryset.order_by(order_criteria)
+        print(stories_queryset)
+        page = self.paginate_queryset(stories_queryset)
+        if page is not None:
+            serializer = StoryDetailSerializer(page, many=True, context={"request": request})
+            return self.get_paginated_response(serializer.data)
+
+        serializer = StoryDetailSerializer(stories_queryset, many=True, context={"request": request})
+        return Response(serializer.data)
+
 
 class CardsViewSet(viewsets.ModelViewSet):
     serializer_class = CardSerializer
@@ -222,3 +261,14 @@ class LikesViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+class UserStoryViewCreate(CreateAPIView):
+    queryset = UserStoryView.objects.all()
+    serializer_class = UserStoryViewSerializer
+
+    def perform_create(self, serializer):
+        story_id = self.request.data.get("story")
+        story = get_object_or_404(Story, id=story_id)
+
+        UserStoryView.objects.get_or_create(user=self.request.user, story=story)

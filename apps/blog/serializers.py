@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
-from .models import Story, Card, BlockType, Block, Comment, Like
+from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView
 
 
 class StorySerializer(serializers.ModelSerializer):
@@ -17,6 +17,9 @@ class StoryDetailSerializer(serializers.ModelSerializer):
     likes_count = serializers.SerializerMethodField()
     card_colors = serializers.SerializerMethodField()
     user_has_liked = serializers.SerializerMethodField()
+    user_has_viewed = serializers.SerializerMethodField()
+    topic_title = serializers.ReadOnlyField(source="topic.title")
+    tag_name = serializers.ReadOnlyField(source="topic.tag.name")
 
     class Meta:
         model = Story
@@ -47,6 +50,12 @@ class StoryDetailSerializer(serializers.ModelSerializer):
         else:
             return {"liked": False, "disliked": False, "like_id": None}
 
+    def get_user_has_viewed(self, obj):
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return False
+        return UserStoryView.objects.filter(user=user, story=obj).exists()
+
 
 class CardSerializer(serializers.ModelSerializer):
     soft_skill_color = serializers.ReadOnlyField(source="soft_skill.color")
@@ -63,8 +72,6 @@ class CardSerializer(serializers.ModelSerializer):
         model = Card
         fields = "__all__"
         read_only_fields = ["created_time", "updated_time"]
-
-
 
 
 class BlockTypeSerializer(serializers.ModelSerializer):
@@ -122,3 +129,10 @@ class LikeSerializer(serializers.ModelSerializer):
         model = Like
         fields = "__all__"
         read_only_fields = ["created_time", "updated_time", "user"]
+
+
+class UserStoryViewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserStoryView
+        fields = "__all__"
+        read_only_fields = ("user",)
