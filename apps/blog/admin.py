@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Story, Card, BlockType, Block, Comment, Like
+from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView
 
 
 @admin.register(Story)
@@ -45,4 +45,12 @@ class LikeAdmin(admin.ModelAdmin):
     list_display = ("liked", "user", "is_active", "content_type", "content", "created_time", "updated_time")
     list_filter = ("user__username", "liked", "is_active")
     search_fields = ("user__username",)
+    list_per_page = 100
+
+
+@admin.register(UserStoryView)
+class UserStoryViewAdmin(admin.ModelAdmin):
+    list_display = ("user", "story")
+    list_filter = ("user__username", "story")
+    search_fields = ("user", "story")
     list_per_page = 100

@@ -35,6 +35,21 @@ class TopicTagSerializer(serializers.ModelSerializer):
 
 
 class TopicSerializer(serializers.ModelSerializer):
+    topic_content_type_id = serializers.SerializerMethodField()
+    user_has_liked = serializers.SerializerMethodField()
+
+    def get_topic_content_type_id(self, obj):
+        content_type = ContentType.objects.get_for_model(Topic)
+        return content_type.id
+
+    def get_user_has_liked(self, obj):
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return False
+        content_type = ContentType.objects.get_for_model(obj)
+        like = Like.objects.filter(user=user, content_type=content_type.id, object_id=obj.id, is_active=True).first()
+        return like.id if like else False
+
     class Meta:
         model = Topic
         fields = "__all__"
