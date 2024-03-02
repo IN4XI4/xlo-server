@@ -23,6 +23,7 @@ from .serializers import (
     ProfileColorSerializer,
     ExperienceSerializer,
     GenderSerializer,
+    UserDetailSerializer
 )
 
 
@@ -63,6 +64,8 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         if self.action in ["update", "partial_update"]:
             return CompleteUserSerializer
+        elif self.action == "retrieve":
+            return UserDetailSerializer
         return UserSerializer
 
     def perform_update(self, serializer):

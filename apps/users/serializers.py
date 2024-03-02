@@ -82,6 +82,44 @@ class CompleteUserSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class UserDetailSerializer(serializers.ModelSerializer):
+    country = CountryField(name_only=True)
+    birth_year = serializers.SerializerMethodField()
+    profile_color_value = serializers.ReadOnlyField(source="profile_color.color")
+    experience_value = serializers.ReadOnlyField(source="experience.experience")
+    country_flag = serializers.SerializerMethodField()
+
+    class Meta:
+        model = get_user_model()
+        fields = [
+            "country",
+            "gender",
+            "first_name",
+            "last_name",
+            "email",
+            "profile_picture",
+            "profession",
+            "experience",
+            "biography",
+            "linkedin_profile",
+            "website",
+            "birth_year",
+            "profile_color_value",
+            "country_flag",
+            "experience_value",
+        ]
+
+    def get_birth_year(self, obj):
+        return obj.birthday.year if obj.birthday else None
+
+    def get_country_flag(self, obj):
+        request = self.context.get('request')
+        if obj.country and request:
+            flag_url = obj.country.flag
+            return request.build_absolute_uri(flag_url)
+        return None
+
+
 class PasswordResetSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         fields = ("password", "password2", "reset_code")
