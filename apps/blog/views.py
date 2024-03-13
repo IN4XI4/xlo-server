@@ -181,7 +181,6 @@ class StoriesViewSet(viewsets.ModelViewSet):
                 "soft_skill": request.data.get(f"cards[{card_index}].selectedSoftSkill"),
                 "mentor": request.data.get(f"cards[{card_index}].selectedMentor"),
             }
-            print("card data", card_data)
             card_serializer = CardSerializer(data=card_data)
             if card_serializer.is_valid():
                 card = card_serializer.save()
@@ -199,7 +198,6 @@ class StoriesViewSet(viewsets.ModelViewSet):
                 }
                 if f"cards[{card_index}].blocks[{block_index}].image" in request.FILES:
                     block_data["image"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image"]
-                print("block data", block_data)
                 block_serializer = BlockSerializer(data=block_data)
                 if block_serializer.is_valid():
                     block_serializer.save()
