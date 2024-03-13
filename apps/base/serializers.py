@@ -37,6 +37,7 @@ class TopicTagSerializer(serializers.ModelSerializer):
 class TopicSerializer(serializers.ModelSerializer):
     topic_content_type_id = serializers.SerializerMethodField()
     user_has_liked = serializers.SerializerMethodField()
+    is_creator = serializers.SerializerMethodField()
 
     def get_topic_content_type_id(self, obj):
         content_type = ContentType.objects.get_for_model(Topic)
@@ -49,6 +50,14 @@ class TopicSerializer(serializers.ModelSerializer):
         content_type = ContentType.objects.get_for_model(obj)
         like = Like.objects.filter(user=user, content_type=content_type.id, object_id=obj.id, is_active=True).first()
         return like.id if like else False
+
+    def get_is_creator(self, obj):
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return False
+        if user.groups.filter(name="creator").exists():
+            return True
+        return user.is_staff or user.is_superuser
 
     class Meta:
         model = Topic

@@ -57,10 +57,11 @@ class UserSerializer(serializers.ModelSerializer):
 class UserMeSerializer(serializers.ModelSerializer):
     picture = serializers.SerializerMethodField()
     is_commentor = serializers.SerializerMethodField()
+    is_creator = serializers.SerializerMethodField()
 
     class Meta:
         model = get_user_model()
-        fields = ["id", "username", "first_name", "email", "date_joined", "picture", "is_commentor"]
+        fields = ["id", "username", "first_name", "email", "date_joined", "picture", "is_commentor", "is_creator"]
 
     def get_picture(self, obj):
         if obj.profile_picture:
@@ -72,6 +73,14 @@ class UserMeSerializer(serializers.ModelSerializer):
         if obj.groups.filter(name__in=["commentor", "creator"]).exists():
             return True
         return obj.is_staff or obj.is_superuser
+
+    def get_is_creator(self, obj):
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return False
+        if user.groups.filter(name="creator").exists():
+            return True
+        return user.is_staff or user.is_superuser
 
 
 class CompleteUserSerializer(serializers.ModelSerializer):
@@ -113,7 +122,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
         return obj.birthday.year if obj.birthday else None
 
     def get_country_flag(self, obj):
-        request = self.context.get('request')
+        request = self.context.get("request")
         if obj.country and request:
             flag_url = obj.country.flag
             return request.build_absolute_uri(flag_url)
