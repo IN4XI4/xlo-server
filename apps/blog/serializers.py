@@ -60,12 +60,14 @@ class StoryDetailSerializer(serializers.ModelSerializer):
 class CardSerializer(serializers.ModelSerializer):
     soft_skill_color = serializers.ReadOnlyField(source="soft_skill.color")
     soft_skill_monster_name = serializers.ReadOnlyField(source="soft_skill.monster_name")
+    soft_skill_monster_profile = serializers.ReadOnlyField(source="soft_skill.monster_profile")
     soft_skill_monster_picture = serializers.ImageField(
         source="soft_skill.monster_picture", required=False, allow_null=True, use_url=True
     )
     mentor_color = serializers.ReadOnlyField(source="mentor.color")
     mentor_name = serializers.ReadOnlyField(source="mentor.name")
     mentor_job = serializers.ReadOnlyField(source="mentor.job")
+    mentor_profile = serializers.ReadOnlyField(source="mentor.profile")
     mentor_picture = serializers.ImageField(source="mentor.picture", required=False, allow_null=True, use_url=True)
 
     class Meta:
