@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
-from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView
+from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, RecallCard
 
 
 class StorySerializer(serializers.ModelSerializer):
@@ -138,3 +138,14 @@ class UserStoryViewSerializer(serializers.ModelSerializer):
         model = UserStoryView
         fields = "__all__"
         read_only_fields = ("user",)
+
+
+class RecallCardSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RecallCard
+        fields = "__all__"
+        read_only_fields = (
+            "created_time",
+            "updated_time",
+            "user",
+        )
