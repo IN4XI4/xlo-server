@@ -1,6 +1,8 @@
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import viewsets, generics, permissions
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
+
 
 from .models import TopicTag, Topic, SoftSkill, Mentor
 from .serializers import (
@@ -10,6 +12,10 @@ from .serializers import (
     MentorSerializer,
     ContentTypeSerializer,
 )
+
+
+class CustomPagination(PageNumberPagination):
+    page_size = 50
 
 
 class TopicTagsViewSet(viewsets.ReadOnlyModelViewSet):
@@ -38,6 +44,7 @@ class SoftSkillsViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_fields = {
         "name": ("exact", "icontains"),
     }
+    pagination_class = CustomPagination
 
 
 class MentorsViewSet(viewsets.ReadOnlyModelViewSet):
@@ -47,6 +54,7 @@ class MentorsViewSet(viewsets.ReadOnlyModelViewSet):
     filterset_fields = {
         "name": ("exact", "icontains"),
     }
+    pagination_class = CustomPagination
 
 
 class ContentTypeListView(generics.ListAPIView):
