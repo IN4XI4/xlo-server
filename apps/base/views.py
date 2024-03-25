@@ -15,7 +15,7 @@ from .serializers import (
 
 
 class CustomPagination(PageNumberPagination):
-    page_size = 50
+    page_size = 100
 
 
 class TopicTagsViewSet(viewsets.ReadOnlyModelViewSet):
