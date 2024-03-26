@@ -69,7 +69,18 @@ class CardSerializer(serializers.ModelSerializer):
     mentor_job = serializers.ReadOnlyField(source="mentor.job")
     mentor_profile = serializers.ReadOnlyField(source="mentor.profile")
     mentor_picture = serializers.ImageField(source="mentor.picture", required=False, allow_null=True, use_url=True)
+    user_has_recalled = serializers.SerializerMethodField()
 
+    def get_user_has_recalled(self, obj):
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return {"recall": False, "level": None, "recall_id": None}
+        recall = RecallCard.objects.filter(user=user, card=obj).first()
+        if recall:
+            return {"recall": True, "level": recall.importance_level, "recall_id": recall.id}
+        else:
+            return {"recall": False, "level": None, "recall_id": None}
+    
     class Meta:
         model = Card
         fields = "__all__"
