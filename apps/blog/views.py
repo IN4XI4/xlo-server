@@ -239,16 +239,17 @@ class CardsViewSet(viewsets.ModelViewSet):
         return Card.objects.all()
 
 
+class BlocksPagination(PageNumberPagination):
+    page_size = 20
+
+
 class BlockTypesViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = BlockType.objects.all()
     serializer_class = BlockTypeSerializer
     filterset_fields = {
         "name": ("exact", "icontains"),
     }
-
-
-class BlocksPagination(PageNumberPagination):
-    page_size = 15
+    pagination_class = BlocksPagination
 
 
 class BlocksViewSet(viewsets.ModelViewSet):
