@@ -27,8 +27,13 @@ from .serializers import (
     BlockSerializer,
     UserStoryViewSerializer,
     RecallCardSerializer,
+    RecallCardDetailSerializer,
 )
 from apps.base.models import Topic
+
+
+class BlocksPagination(PageNumberPagination):
+    page_size = 20
 
 
 class StoriesViewSet(viewsets.ModelViewSet):
@@ -227,6 +232,7 @@ class CardsViewSet(viewsets.ModelViewSet):
         "created_time": ("gte", "lte"),
         "updated_time": ("gte", "lte"),
     }
+    pagination_class = BlocksPagination
 
     def get_queryset(self):
         """
@@ -237,10 +243,6 @@ class CardsViewSet(viewsets.ModelViewSet):
         - QuerySet: A queryset of Card objects.
         """
         return Card.objects.all()
-
-
-class BlocksPagination(PageNumberPagination):
-    page_size = 20
 
 
 class BlockTypesViewSet(viewsets.ReadOnlyModelViewSet):
@@ -340,5 +342,21 @@ class RecallCardViewSet(viewsets.ModelViewSet):
         "updated_time": ("gte", "lte"),
     }
 
+    def get_serializer_class(self):
+        if self.action == "list_user_recall_cards":
+            return RecallCardDetailSerializer
+        return super().get_serializer_class()
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+    @action(detail=False, methods=["get"], url_path="user-recall-cards")
+    def list_user_recall_cards(self, request, *args, **kwargs):
+        user = request.user
+        very_important_cards = RecallCard.objects.filter(
+        user=user, importance_level="2").order_by('?')
+        important_cards = RecallCard.objects.filter(
+            user=user, importance_level="1").order_by('?')
+        combined_cards = list(very_important_cards) + list(important_cards)
+        serializer = self.get_serializer(combined_cards, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

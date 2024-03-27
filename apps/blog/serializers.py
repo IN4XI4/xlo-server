@@ -80,7 +80,7 @@ class CardSerializer(serializers.ModelSerializer):
             return {"recall": True, "level": recall.importance_level, "recall_id": recall.id}
         else:
             return {"recall": False, "level": None, "recall_id": None}
-    
+
     class Meta:
         model = Card
         fields = "__all__"
@@ -152,6 +152,20 @@ class UserStoryViewSerializer(serializers.ModelSerializer):
 
 
 class RecallCardSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = RecallCard
+        fields = "__all__"
+        read_only_fields = (
+            "created_time",
+            "updated_time",
+            "user",
+        )
+
+
+class RecallCardDetailSerializer(serializers.ModelSerializer):
+    card = CardSerializer(read_only=True)
+
     class Meta:
         model = RecallCard
         fields = "__all__"
