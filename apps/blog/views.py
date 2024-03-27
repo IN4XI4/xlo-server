@@ -353,10 +353,8 @@ class RecallCardViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="user-recall-cards")
     def list_user_recall_cards(self, request, *args, **kwargs):
         user = request.user
-        very_important_cards = RecallCard.objects.filter(
-        user=user, importance_level="2").order_by('?')
-        important_cards = RecallCard.objects.filter(
-            user=user, importance_level="1").order_by('?')
+        very_important_cards = RecallCard.objects.filter(user=user, importance_level="2").order_by("?")
+        important_cards = RecallCard.objects.filter(user=user, importance_level="1").order_by("?")
         combined_cards = list(very_important_cards) + list(important_cards)
         serializer = self.get_serializer(combined_cards, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
