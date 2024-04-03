@@ -8,8 +8,15 @@ from rest_framework.parsers import MultiPartParser, JSONParser, FormParser
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 
-from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView
-from .permissions import StoryPermissions, CardPermissions, IsStaffOrSuperUser, BlockPermissions, CommentPermissions
+from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, RecallCard
+from .permissions import (
+    StoryPermissions,
+    CardPermissions,
+    IsStaffOrSuperUser,
+    BlockPermissions,
+    CommentPermissions,
+    RecallLikePermissions,
+)
 from .serializers import (
     StorySerializer,
     StoryDetailSerializer,
@@ -19,8 +26,14 @@ from .serializers import (
     BlockTypeSerializer,
     BlockSerializer,
     UserStoryViewSerializer,
+    RecallCardSerializer,
+    RecallCardDetailSerializer,
 )
 from apps.base.models import Topic
+
+
+class BlocksPagination(PageNumberPagination):
+    page_size = 20
 
 
 class StoriesViewSet(viewsets.ModelViewSet):
@@ -219,6 +232,7 @@ class CardsViewSet(viewsets.ModelViewSet):
         "created_time": ("gte", "lte"),
         "updated_time": ("gte", "lte"),
     }
+    pagination_class = BlocksPagination
 
     def get_queryset(self):
         """
@@ -229,10 +243,6 @@ class CardsViewSet(viewsets.ModelViewSet):
         - QuerySet: A queryset of Card objects.
         """
         return Card.objects.all()
-
-
-class BlocksPagination(PageNumberPagination):
-    page_size = 20
 
 
 class BlockTypesViewSet(viewsets.ReadOnlyModelViewSet):
@@ -296,7 +306,7 @@ class CommentsViewSet(viewsets.ModelViewSet):
 
 class LikesViewSet(viewsets.ModelViewSet):
     serializer_class = LikeSerializer
-    permission_classes = [CommentPermissions]
+    permission_classes = [RecallLikePermissions]
     filterset_fields = {
         "user": ("exact",),
         "created_time": ("gte", "lte"),
@@ -319,3 +329,32 @@ class UserStoryViewCreate(CreateAPIView):
         story = get_object_or_404(Story, id=story_id)
 
         UserStoryView.objects.get_or_create(user=self.request.user, story=story)
+
+
+class RecallCardViewSet(viewsets.ModelViewSet):
+    serializer_class = RecallCardSerializer
+    permission_classes = [RecallLikePermissions]
+    queryset = RecallCard.objects.all()
+    filterset_fields = {
+        "user": ("exact",),
+        "card": ("exact",),
+        "created_time": ("gte", "lte"),
+        "updated_time": ("gte", "lte"),
+    }
+
+    def get_serializer_class(self):
+        if self.action == "list_user_recall_cards":
+            return RecallCardDetailSerializer
+        return super().get_serializer_class()
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=False, methods=["get"], url_path="user-recall-cards")
+    def list_user_recall_cards(self, request, *args, **kwargs):
+        user = request.user
+        very_important_cards = RecallCard.objects.filter(user=user, importance_level="2").order_by("?")
+        important_cards = RecallCard.objects.filter(user=user, importance_level="1").order_by("?")
+        combined_cards = list(very_important_cards) + list(important_cards)
+        serializer = self.get_serializer(combined_cards, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)

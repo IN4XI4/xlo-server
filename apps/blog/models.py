@@ -104,3 +104,18 @@ class UserStoryView(models.Model):
 
     class Meta:
         unique_together = ("user", "story")
+
+
+class RecallCard(models.Model):
+    IMPORTANCE_LEVELS = [
+        ("1", "Important"),
+        ("2", "Vert Important"),
+    ]
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name="card_to_recall")
+    importance_level = models.CharField(max_length=1, choices=IMPORTANCE_LEVELS, default="1")
+    created_time = models.DateTimeField(auto_now=False, auto_now_add=True)
+    updated_time = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("user", "card")

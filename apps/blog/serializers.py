@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
-from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView
+from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, RecallCard
 
 
 class StorySerializer(serializers.ModelSerializer):
@@ -69,6 +69,17 @@ class CardSerializer(serializers.ModelSerializer):
     mentor_job = serializers.ReadOnlyField(source="mentor.job")
     mentor_profile = serializers.ReadOnlyField(source="mentor.profile")
     mentor_picture = serializers.ImageField(source="mentor.picture", required=False, allow_null=True, use_url=True)
+    user_has_recalled = serializers.SerializerMethodField()
+
+    def get_user_has_recalled(self, obj):
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return {"recall": False, "level": None, "recall_id": None}
+        recall = RecallCard.objects.filter(user=user, card=obj).first()
+        if recall:
+            return {"recall": True, "level": recall.importance_level, "recall_id": recall.id}
+        else:
+            return {"recall": False, "level": None, "recall_id": None}
 
     class Meta:
         model = Card
@@ -138,3 +149,28 @@ class UserStoryViewSerializer(serializers.ModelSerializer):
         model = UserStoryView
         fields = "__all__"
         read_only_fields = ("user",)
+
+
+class RecallCardSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = RecallCard
+        fields = "__all__"
+        read_only_fields = (
+            "created_time",
+            "updated_time",
+            "user",
+        )
+
+
+class RecallCardDetailSerializer(serializers.ModelSerializer):
+    card = CardSerializer(read_only=True)
+
+    class Meta:
+        model = RecallCard
+        fields = "__all__"
+        read_only_fields = (
+            "created_time",
+            "updated_time",
+            "user",
+        )
