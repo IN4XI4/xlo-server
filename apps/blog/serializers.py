@@ -64,6 +64,9 @@ class CardSerializer(serializers.ModelSerializer):
     soft_skill_monster_picture = serializers.ImageField(
         source="soft_skill.monster_picture", required=False, allow_null=True, use_url=True
     )
+    soft_skill_name = serializers.ReadOnlyField(source="soft_skill.name")
+    soft_skill_description = serializers.ReadOnlyField(source="soft_skill.description")
+    soft_skill_logo = serializers.FileField(source="soft_skill.logo", required=False, allow_null=True, use_url=True)
     mentor_color = serializers.ReadOnlyField(source="mentor.color")
     mentor_name = serializers.ReadOnlyField(source="mentor.name")
     mentor_job = serializers.ReadOnlyField(source="mentor.job")
