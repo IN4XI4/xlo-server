@@ -88,7 +88,7 @@ class Comment(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, null=True, blank=True)
     story = models.ForeignKey(Story, on_delete=models.CASCADE)
     parent = models.ForeignKey("self", on_delete=models.CASCADE, null=True, blank=True, related_name="replies")
-    comment_text = models.CharField(max_length=250)
+    comment_text = models.CharField(max_length=3000)
     is_active = models.BooleanField(default=False)
     created_time = models.DateTimeField(auto_now=False, auto_now_add=True)
     updated_time = models.DateTimeField(auto_now=True)
@@ -119,3 +119,16 @@ class RecallCard(models.Model):
 
     class Meta:
         unique_together = ("user", "card")
+
+
+class Notification(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="notifications")
+    date = models.DateTimeField(auto_now_add=True)
+    notification_type = models.CharField(max_length=10, choices=(("reply", "Reply"), ("like", "Like")))
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey("content_type", "object_id")
+    has_viewed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Notification for {self.user} - Type: {self.notification_type}"

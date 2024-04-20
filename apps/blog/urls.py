@@ -9,7 +9,8 @@ from .views import (
     CommentsViewSet,
     LikesViewSet,
     UserStoryViewCreate,
-    RecallCardViewSet
+    RecallCardViewSet,
+    NotificationViewSet
 )
 
 
@@ -23,6 +24,7 @@ router.register(r"likes", LikesViewSet, basename="likes")
 router.register(r"blocktypes", BlockTypesViewSet, basename="blocktypes")
 router.register(r"blocks", BlocksViewSet, basename="blocks")
 router.register(r"recalls", RecallCardViewSet, basename="recalls")
+router.register(r"notifications", NotificationViewSet, basename="notifications")
 
 
 urlpatterns = [
