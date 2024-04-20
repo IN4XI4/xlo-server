@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.db.models import F, OuterRef, Subquery
 from django.shortcuts import get_object_or_404
 from django.contrib.contenttypes.models import ContentType
@@ -8,7 +9,7 @@ from rest_framework.parsers import MultiPartParser, JSONParser, FormParser
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 
-from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, RecallCard
+from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, RecallCard, Notification
 from .permissions import (
     StoryPermissions,
     CardPermissions,
@@ -16,6 +17,7 @@ from .permissions import (
     BlockPermissions,
     CommentPermissions,
     RecallLikePermissions,
+    NotificationPermissions,
 )
 from .serializers import (
     StorySerializer,
@@ -28,12 +30,17 @@ from .serializers import (
     UserStoryViewSerializer,
     RecallCardSerializer,
     RecallCardDetailSerializer,
+    NotificationSerializer,
 )
 from apps.base.models import Topic
 
 
 class BlocksPagination(PageNumberPagination):
     page_size = 20
+
+
+class NotificationsPagination(PageNumberPagination):
+    page_size = 10
 
 
 class StoriesViewSet(viewsets.ModelViewSet):
@@ -242,7 +249,7 @@ class CardsViewSet(viewsets.ModelViewSet):
         Returns:
         - QuerySet: A queryset of Card objects.
         """
-        return Card.objects.all()
+        return Card.objects.all().order_by("id")
 
 
 class BlockTypesViewSet(viewsets.ReadOnlyModelViewSet):
@@ -255,7 +262,7 @@ class BlockTypesViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class BlocksViewSet(viewsets.ModelViewSet):
-    queryset = Block.objects.all()
+    queryset = Block.objects.all().order_by("id")
     serializer_class = BlockSerializer
     permission_classes = [BlockPermissions]
     pagination_class = BlocksPagination
@@ -295,10 +302,19 @@ class CommentsViewSet(viewsets.ModelViewSet):
     ]
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        with transaction.atomic():
+            comment = serializer.save(user=self.request.user)
+            if comment.parent is not None:
+                if comment.parent.user != self.request.user:
+                    Notification.objects.create(
+                        user=comment.parent.user,
+                        notification_type="reply",
+                        content_type=ContentType.objects.get_for_model(Comment),
+                        object_id=comment.id,
+                    )
 
     def get_queryset(self):
-        return Comment.objects.filter(is_active=True).order_by("id")
+        return Comment.objects.filter(is_active=True, user=self.request.user).order_by("id")
 
     def get_serializer_context(self):
         return {"request": self.request}
@@ -317,7 +333,18 @@ class LikesViewSet(viewsets.ModelViewSet):
         return Like.objects.filter(is_active=True)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        with transaction.atomic():
+            serializer.save(user=self.request.user)
+            like_instance = serializer.instance
+            if like_instance.liked and like_instance.content_type == ContentType.objects.get_for_model(Comment):
+                comment = like_instance.content
+                if comment.user != self.request.user:
+                    Notification.objects.create(
+                        user=comment.user,
+                        notification_type="like",
+                        content_type=ContentType.objects.get_for_model(Like),
+                        object_id=like_instance.id,
+                    )
 
 
 class UserStoryViewCreate(CreateAPIView):
@@ -358,3 +385,17 @@ class RecallCardViewSet(viewsets.ModelViewSet):
         combined_cards = list(very_important_cards) + list(important_cards)
         serializer = self.get_serializer(combined_cards, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    serializer_class = NotificationSerializer
+    permission_classes = [NotificationPermissions]
+    filterset_fields = {
+        "user": ("exact",),
+        "notification_type": ("exact",),
+        "date": ("gte", "lte"),
+    }
+    pagination_class = NotificationsPagination
+
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user).order_by("-id")

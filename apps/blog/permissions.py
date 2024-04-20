@@ -109,7 +109,6 @@ class CommentPermissions(StoryPermissions):
 class RecallLikePermissions(permissions.BasePermission):
     """
     Custom permission for RecallLike model:
-    - Only allow authenticated users to view information.
     - All authenticated users can create data.
     - Only the user who created the data or superusers can edit or delete it.
     """
@@ -120,4 +119,22 @@ class RecallLikePermissions(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
+        return obj.user == request.user or request.user.is_superuser
+
+
+class NotificationPermissions(permissions.BasePermission):
+    """
+    Custom permissions for Notification model:
+    - Notifications creation is not allowed from the endpoint.
+    - Staff or superusers can view all notifications.
+    - Regular users can view or delete their own notifications.
+    """
+
+    def has_permission(self, request, view):
+        if request.method == "POST":
+            return False
+
+        return request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
         return obj.user == request.user or request.user.is_superuser

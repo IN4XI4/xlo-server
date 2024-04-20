@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
-from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, RecallCard
+from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, RecallCard, Notification
 
 
 class StorySerializer(serializers.ModelSerializer):
@@ -177,3 +177,70 @@ class RecallCardDetailSerializer(serializers.ModelSerializer):
             "updated_time",
             "user",
         )
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    user_action = serializers.SerializerMethodField()
+    comment_details = serializers.SerializerMethodField()
+    formatted_date = serializers.SerializerMethodField()
+    user_picture = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Notification
+        fields = "__all__"
+        read_only_fields = (
+            "date",
+            "user",
+        )
+
+    def get_user_action(self, obj):
+        if obj.notification_type == "like":
+            like = Like.objects.filter(id=obj.object_id).first()
+            if like:
+                return (
+                    f"{like.user.first_name} {like.user.last_name}"
+                    if like.user.first_name and like.user.last_name
+                    else like.user.username
+                )
+        elif obj.notification_type == "reply":
+            reply = Comment.objects.filter(id=obj.object_id).first()
+            if reply:
+                return (
+                    f"{reply.user.first_name} {reply.user.last_name}"
+                    if reply.user.first_name and reply.user.last_name
+                    else reply.user.username
+                )
+        return None
+
+    def get_comment_details(self, obj):
+        details = {"story": None, "story_id": None, "text": None, "parent_text": None}
+        if obj.notification_type == "like":
+            like = Like.objects.filter(id=obj.object_id).first()
+            if like and like.content:
+                details["story"] = like.content.story.title if hasattr(like.content, "story") else None
+                details["story_id"] = like.content.story.id if hasattr(like.content, "story") else None
+                details["text"] = like.content.comment_text if hasattr(like.content, "comment_text") else None
+        elif obj.notification_type == "reply":
+            reply = Comment.objects.filter(id=obj.object_id).select_related("story", "parent").first()
+            if reply:
+                details["story"] = reply.story.title if reply.story else None
+                details["story_id"] = reply.story.id if reply.story else None
+                details["text"] = reply.comment_text if reply else None
+                details["parent_text"] = reply.parent.comment_text if reply.parent else None
+
+        return details
+
+    def get_formatted_date(self, obj):
+        return obj.date.strftime("%B %d, %Y")
+
+    def get_user_picture(self, obj):
+        request = self.context.get("request")
+        if obj.notification_type == "like":
+            like = Like.objects.filter(id=obj.object_id).first()
+            if like and like.user.profile_picture:
+                return request.build_absolute_uri(like.user.profile_picture.url)
+        elif obj.notification_type == "reply":
+            reply = Comment.objects.filter(id=obj.object_id).first()
+            if reply and reply.user.profile_picture:
+                return request.build_absolute_uri(reply.user.profile_picture.url)
+        return None

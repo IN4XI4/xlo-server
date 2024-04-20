@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, RecallCard
+from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, RecallCard, Notification
 
 
 @admin.register(Story)
@@ -42,7 +42,7 @@ class CommentAdmin(admin.ModelAdmin):
 
 @admin.register(Like)
 class LikeAdmin(admin.ModelAdmin):
-    list_display = ("liked", "user", "is_active", "content_type", "content", "created_time", "updated_time")
+    list_display = ("id", "liked", "user", "is_active", "content_type", "content", "created_time", "updated_time")
     list_filter = ("user__username", "liked", "is_active")
     search_fields = ("user__username",)
     list_per_page = 100
@@ -61,4 +61,12 @@ class RecallCardAdmin(admin.ModelAdmin):
     list_display = ("user", "card")
     list_filter = ("user__username", "card", "importance_level")
     search_fields = ("user", "card")
+    list_per_page = 100
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ("user", "date", "notification_type")
+    list_filter = ("user__username", "date", "notification_type")
+    search_fields = ("user",)
     list_per_page = 100
