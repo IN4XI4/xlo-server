@@ -314,7 +314,7 @@ class CommentsViewSet(viewsets.ModelViewSet):
                     )
 
     def get_queryset(self):
-        return Comment.objects.filter(is_active=True, user=self.request.user).order_by("id")
+        return Comment.objects.filter(is_active=True).order_by("id")
 
     def get_serializer_context(self):
         return {"request": self.request}
