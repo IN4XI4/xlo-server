@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.text import slugify
 
 
 class TopicTag(models.Model):
@@ -17,6 +18,21 @@ class Topic(models.Model):
     title = models.CharField(max_length=300)
     image = models.ImageField(upload_to="topics/", blank=True, null=True)
     tag = models.ForeignKey(TopicTag, on_delete=models.SET_NULL, null=True, blank=True)
+    slug = models.SlugField(max_length=320, blank=True, unique=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            title_words = self.title.split()[:7]
+            short_title = " ".join(title_words)
+            self.slug = slugify(short_title)
+
+            original_slug = self.slug
+            count = 0
+            while Topic.objects.filter(slug=self.slug).exists():
+                count += 1
+                self.slug = f"{original_slug}-{count}"
+
+        super(Topic, self).save(*args, **kwargs)
 
     def __str__(self):
         return self.title

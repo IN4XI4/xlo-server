@@ -1,8 +1,10 @@
+from django.shortcuts import get_object_or_404
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import viewsets, generics, permissions
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
-
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from .models import TopicTag, Topic, SoftSkill, Mentor
 from .serializers import (
@@ -35,6 +37,15 @@ class TopicsViewSet(viewsets.ReadOnlyModelViewSet):
         "title": ("exact", "icontains"),
         "tag": ("exact", "in"),
     }
+
+    @action(detail=False, methods=["get"], url_path="find-by-slug/(?P<slug>[^/.]+)", url_name="find-by-slug")
+    def find_by_slug(self, request, slug=None):
+        """
+        Retrieve a topic by its slug, independent of its ID.
+        """
+        topic = get_object_or_404(Topic, slug=slug)
+        serializer = self.get_serializer(topic)
+        return Response(serializer.data)
 
 
 class SoftSkillsViewSet(viewsets.ReadOnlyModelViewSet):
