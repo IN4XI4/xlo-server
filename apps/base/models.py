@@ -37,6 +37,9 @@ class Topic(models.Model):
     def __str__(self):
         return self.title
 
+    class Meta:
+        ordering = ["id"]
+
 
 class SoftSkill(models.Model):
     name = models.CharField(max_length=250)
