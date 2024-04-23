@@ -10,7 +10,7 @@ class TopicReadOnlySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Topic
-        fields = ["id", "title", "image", "user_has_liked"]
+        fields = ["id", "title", "image", "user_has_liked", "slug"]
 
     def get_user_has_liked(self, obj):
         user = self.context["request"].user

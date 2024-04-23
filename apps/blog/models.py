@@ -1,7 +1,7 @@
 from django.db import models
+from django.utils.text import slugify
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
-
 
 from apps.users.models import CustomUser
 from apps.base.models import Topic, SoftSkill, Mentor
@@ -35,6 +35,21 @@ class Story(models.Model):
     created_time = models.DateTimeField(auto_now_add=True)
     updated_time = models.DateTimeField(auto_now=True)
     views_count = models.IntegerField(default=0)
+    slug = models.SlugField(max_length=320, blank=True, unique=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            title_words = self.title.split()[:7]
+            short_title = " ".join(title_words)
+            self.slug = slugify(short_title)
+
+            original_slug = self.slug
+            count = 0
+            while Story.objects.filter(slug=self.slug).exists():
+                count += 1
+                self.slug = f"{original_slug}-{count}"
+
+        super(Story, self).save(*args, **kwargs)
 
     def __str__(self):
         return self.title

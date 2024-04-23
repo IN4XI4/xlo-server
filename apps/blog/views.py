@@ -66,7 +66,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
         """
         Return the class to use for the serializer.
         """
-        if self.action in ["retrieve", "list"]:
+        if self.action in ["retrieve", "list", "find_by_slug"]:
             return StoryDetailSerializer
         return StorySerializer
 
@@ -144,6 +144,15 @@ class StoriesViewSet(viewsets.ModelViewSet):
         story.is_active = True
         story.save()
         return Response({"message": "Story approved"}, status=status.HTTP_202_ACCEPTED)
+
+    @action(detail=False, methods=["get"], url_path="find-by-slug/(?P<slug>[^/.]+)", url_name="find-by-slug")
+    def find_by_slug(self, request, slug=None):
+        """
+        Retrieve a topic by its slug, independent of its ID.
+        """
+        story = get_object_or_404(Story, slug=slug)
+        serializer = self.get_serializer(story)
+        return Response(serializer.data)
 
     @action(detail=False, methods=["get"])
     def liked_topics_stories(self, request):
