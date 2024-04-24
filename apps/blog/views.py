@@ -5,9 +5,10 @@ from django.contrib.contenttypes.models import ContentType
 from rest_framework import viewsets, status
 from rest_framework.generics import CreateAPIView
 from rest_framework.decorators import action
-from rest_framework.parsers import MultiPartParser, JSONParser, FormParser
-from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import MultiPartParser, JSONParser, FormParser
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 
 from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, RecallCard, Notification
 from .permissions import (
@@ -86,6 +87,8 @@ class StoriesViewSet(viewsets.ModelViewSet):
         """
         if self.action == "approve_story":
             permission_classes = [IsStaffOrSuperUser()]
+        elif self.action == "find_by_slug":
+            return [AllowAny()]
         else:
             permission_classes = [permission() for permission in self.permission_classes]
         return permission_classes
@@ -128,6 +131,21 @@ class StoriesViewSet(viewsets.ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
+    @action(detail=False, methods=["get"], url_path="find-by-slug/(?P<slug>[^/.]+)", url_name="find-by-slug")
+    def find_by_slug(self, request, slug=None):
+        """
+        Retrieve a topic by its slug, independent of its ID.
+        """
+        story = get_object_or_404(Story, slug=slug)
+        if not story.free_access:
+            if not request.user.is_authenticated:
+                return Response(
+                    {"detail": "Authentication credentials were not provided or are invalid."},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+        serializer = self.get_serializer(story)
+        return Response(serializer.data)
+
     @action(methods=["post"], detail=True)
     def approve_story(self, request, pk=None):
         """
@@ -144,15 +162,6 @@ class StoriesViewSet(viewsets.ModelViewSet):
         story.is_active = True
         story.save()
         return Response({"message": "Story approved"}, status=status.HTTP_202_ACCEPTED)
-
-    @action(detail=False, methods=["get"], url_path="find-by-slug/(?P<slug>[^/.]+)", url_name="find-by-slug")
-    def find_by_slug(self, request, slug=None):
-        """
-        Retrieve a topic by its slug, independent of its ID.
-        """
-        story = get_object_or_404(Story, slug=slug)
-        serializer = self.get_serializer(story)
-        return Response(serializer.data)
 
     @action(detail=False, methods=["get"])
     def liked_topics_stories(self, request):
@@ -258,7 +267,15 @@ class CardsViewSet(viewsets.ModelViewSet):
         Returns:
         - QuerySet: A queryset of Card objects.
         """
-        return Card.objects.all().order_by("id")
+        if self.request.user.is_authenticated:
+            return Card.objects.all().order_by("id")
+        else:
+            return Card.objects.filter(story__free_access=True).order_by("id")
+
+    def get_permissions(self):
+        if self.action == "list":
+            return [AllowAny()]
+        return [permission() for permission in self.permission_classes]
 
 
 class BlockTypesViewSet(viewsets.ReadOnlyModelViewSet):
@@ -289,6 +306,17 @@ class BlocksViewSet(viewsets.ModelViewSet):
 
     def get_serializer_context(self):
         return {"request": self.request}
+
+    def get_queryset(self):
+        if self.request.user.is_authenticated:
+            return Block.objects.all().order_by("id")
+        else:
+            return Block.objects.filter(card__story__free_access=True).order_by("id")
+
+    def get_permissions(self):
+        if self.action == "list":
+            return [AllowAny()]
+        return [permission() for permission in self.permission_classes]
 
 
 class CommentsViewSet(viewsets.ModelViewSet):
@@ -323,7 +351,15 @@ class CommentsViewSet(viewsets.ModelViewSet):
                     )
 
     def get_queryset(self):
-        return Comment.objects.filter(is_active=True).order_by("id")
+        if self.request.user.is_authenticated:
+            return Comment.objects.filter(is_active=True).order_by("id")
+        else:
+            return Comment.objects.filter(story__free_access=True).order_by("id")
+
+    def get_permissions(self):
+        if self.action == "list":
+            return [AllowAny()]
+        return [permission() for permission in self.permission_classes]
 
     def get_serializer_context(self):
         return {"request": self.request}
