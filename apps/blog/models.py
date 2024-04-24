@@ -36,6 +36,7 @@ class Story(models.Model):
     updated_time = models.DateTimeField(auto_now=True)
     views_count = models.IntegerField(default=0)
     slug = models.SlugField(max_length=320, blank=True, unique=True)
+    free_access = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         if not self.slug:
