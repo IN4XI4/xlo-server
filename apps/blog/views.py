@@ -1,6 +1,7 @@
 from django.db import transaction
 from django.db.models import F, OuterRef, Subquery
 from django.shortcuts import get_object_or_404
+from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import viewsets, status
 from rest_framework.generics import CreateAPIView
@@ -144,6 +145,8 @@ class StoriesViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
         serializer = self.get_serializer(story)
+        story.views_count += 1
+        story.save()
         return Response(serializer.data)
 
     @action(methods=["post"], detail=True)
@@ -401,6 +404,19 @@ class UserStoryViewCreate(CreateAPIView):
         story = get_object_or_404(Story, id=story_id)
 
         UserStoryView.objects.get_or_create(user=self.request.user, story=story)
+
+        if (
+            self.request.user.is_superuser
+            or self.request.user.is_staff
+            or self.request.user.groups.filter(name__in=["commentor", "creator"]).exists()
+        ):
+            return
+
+        views_count = UserStoryView.objects.filter(user=self.request.user).count()
+        if views_count >= 3:
+            commentor_group, created = Group.objects.get_or_create(name="commentor")
+            self.request.user.groups.add(commentor_group)
+            self.request.user.save()
 
 
 class RecallCardViewSet(viewsets.ModelViewSet):

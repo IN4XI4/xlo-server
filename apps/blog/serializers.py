@@ -219,6 +219,7 @@ class NotificationSerializer(serializers.ModelSerializer):
             if like and like.content:
                 details["story"] = like.content.story.title if hasattr(like.content, "story") else None
                 details["story_id"] = like.content.story.id if hasattr(like.content, "story") else None
+                details["story_slug"] = like.content.story.slug if hasattr(like.content, "story") else None
                 details["text"] = like.content.comment_text if hasattr(like.content, "comment_text") else None
         elif obj.notification_type == "reply":
             reply = Comment.objects.filter(id=obj.object_id).select_related("story", "parent").first()
