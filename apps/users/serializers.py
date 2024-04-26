@@ -58,10 +58,21 @@ class UserMeSerializer(serializers.ModelSerializer):
     picture = serializers.SerializerMethodField()
     is_commentor = serializers.SerializerMethodField()
     is_creator = serializers.SerializerMethodField()
+    notifications = serializers.SerializerMethodField()
 
     class Meta:
         model = get_user_model()
-        fields = ["id", "username", "first_name", "email", "date_joined", "picture", "is_commentor", "is_creator"]
+        fields = [
+            "id",
+            "username",
+            "first_name",
+            "email",
+            "date_joined",
+            "picture",
+            "is_commentor",
+            "is_creator",
+            "notifications",
+        ]
 
     def get_picture(self, obj):
         if obj.profile_picture:
@@ -81,6 +92,15 @@ class UserMeSerializer(serializers.ModelSerializer):
         if user.groups.filter(name="creator").exists():
             return True
         return user.is_staff or user.is_superuser
+
+    def get_notifications(self, obj):
+        unread_notifications = obj.notifications.filter(has_viewed=False)
+        notification_info = {
+            "has_unread": unread_notifications.exists(),
+            "like_count": unread_notifications.filter(notification_type="like").count(),
+            "reply_count": unread_notifications.filter(notification_type="reply").count(),
+        }
+        return notification_info
 
 
 class CompleteUserSerializer(serializers.ModelSerializer):
