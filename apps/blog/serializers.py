@@ -226,6 +226,7 @@ class NotificationSerializer(serializers.ModelSerializer):
             if reply:
                 details["story"] = reply.story.title if reply.story else None
                 details["story_id"] = reply.story.id if reply.story else None
+                details["story_slug"] = reply.story.slug if reply.story else None
                 details["text"] = reply.comment_text if reply else None
                 details["parent_text"] = reply.parent.comment_text if reply.parent else None
 
