@@ -64,8 +64,14 @@ class CustomUser(AbstractUser):
     website = models.CharField(max_length=50, null=True, blank=True)
     linkedin_profile = models.CharField(max_length=50, null=True, blank=True)
     country = CountryField(blank=True, null=True)
-    show_info = models.BooleanField(default=True)
     reset_code = models.CharField(max_length=50, null=True, blank=True)
+
+    # Settings fields:
+    show_info = models.BooleanField(default=True) # Shows detailed profile info to others
+    email_weekly_recalls = models.BooleanField(default=False) # Every week as a recall reminder
+    email_new_stories = models.BooleanField(default=False) # For liked topics
+    email_reply = models.BooleanField(default=False) # Everytime someone liked or replied your comment
+    email_info = models.BooleanField(default=False) # The admin is allowed to send emails anytime
 
     USERNAME_FIELD = "email"
     EMAIL_FIELD = "email"
