@@ -34,6 +34,7 @@ from .serializers import (
     RecallCardDetailSerializer,
     NotificationSerializer,
 )
+from .tasks import send_like_email
 from apps.base.models import Topic
 
 
@@ -352,6 +353,8 @@ class CommentsViewSet(viewsets.ModelViewSet):
                         content_type=ContentType.objects.get_for_model(Comment),
                         object_id=comment.id,
                     )
+                    if comment.parent.user.email_reply:
+                        send_like_email.delay(comment.parent.user.id, comment.parent.comment_text, True)
 
     def get_queryset(self):
         if self.request.user.is_authenticated:
@@ -393,6 +396,8 @@ class LikesViewSet(viewsets.ModelViewSet):
                         content_type=ContentType.objects.get_for_model(Like),
                         object_id=like_instance.id,
                     )
+                if comment.user.email_reply:
+                    send_like_email.delay(comment.user.id, comment.comment_text)
 
 
 class UserStoryViewCreate(CreateAPIView):
