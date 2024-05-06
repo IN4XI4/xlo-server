@@ -40,3 +40,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+
+
+# Celery and redis
+dump.rdb

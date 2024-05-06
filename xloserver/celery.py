@@ -9,11 +9,11 @@ app = Celery('xloserver')
 
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
-app.autodiscover_tasks(['apps.blog'])
+app.autodiscover_tasks(['apps.blog', 'apps.base'])
 
 app.conf.beat_schedule = {
-    'send_weekly_recall_email_8am': {
+    'send_weekly_recall_email_9am': {
         'task': 'apps.blog.tasks.send_weekly_recall_email',
-        'schedule': crontab(minute="*"),
+        'schedule': crontab(hour=9, minute=0, day_of_week=1),
     },
 }
