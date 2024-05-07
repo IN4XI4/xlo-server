@@ -1,5 +1,10 @@
 from django.db import models
+from django.dispatch import receiver
 from django.utils.text import slugify
+from django.db.models.signals import post_save
+from ckeditor.fields import RichTextField
+
+from .tasks import send_info_emails
 
 
 class TopicTag(models.Model):
@@ -63,3 +68,22 @@ class Mentor(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class EmailSending(models.Model):
+    TEMPLATE_CHOICES = [
+        ("send_info_with_username", "Send Info with Username"),
+    ]
+    subject = models.CharField(max_length=200)
+    body = RichTextField()
+    template = models.CharField(max_length=50, choices=TEMPLATE_CHOICES, default="send_info_with_username")
+    created_time = models.DateTimeField(auto_now=False, auto_now_add=True)
+
+    def send_emails(self):
+        send_info_emails.delay(self.subject, self.body, self.template)
+
+
+@receiver(post_save, sender=EmailSending)
+def send_email_on_create(sender, instance, created, **kwargs):
+    if created:
+        instance.send_emails()

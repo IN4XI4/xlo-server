@@ -34,6 +34,7 @@ from .serializers import (
     RecallCardDetailSerializer,
     NotificationSerializer,
 )
+from .tasks import send_like_email, send_new_stories_email
 from apps.base.models import Topic
 
 
@@ -138,12 +139,11 @@ class StoriesViewSet(viewsets.ModelViewSet):
         Retrieve a topic by its slug, independent of its ID.
         """
         story = get_object_or_404(Story, slug=slug)
-        if not story.free_access:
-            if not request.user.is_authenticated:
-                return Response(
-                    {"detail": "Authentication credentials were not provided or are invalid."},
-                    status=status.HTTP_401_UNAUTHORIZED,
-                )
+        if not story.free_access and not request.user.is_authenticated:
+            return Response(
+                {"detail": "Authentication credentials were not provided or are invalid."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
         serializer = self.get_serializer(story)
         story.views_count += 1
         story.save()
@@ -244,6 +244,8 @@ class StoriesViewSet(viewsets.ModelViewSet):
                     block_serializer.save()
                 else:
                     return Response(block_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # Send to interested users:
+        send_new_stories_email.delay()
 
         return Response(story_serializer.data, status=status.HTTP_201_CREATED)
 
@@ -352,6 +354,10 @@ class CommentsViewSet(viewsets.ModelViewSet):
                         content_type=ContentType.objects.get_for_model(Comment),
                         object_id=comment.id,
                     )
+                    if comment.parent.user.email_reply:
+                        send_like_email.delay(
+                            comment.parent.user.id, comment.parent.comment_text, True, comment.story.slug
+                        )
 
     def get_queryset(self):
         if self.request.user.is_authenticated:
@@ -393,6 +399,8 @@ class LikesViewSet(viewsets.ModelViewSet):
                         content_type=ContentType.objects.get_for_model(Like),
                         object_id=like_instance.id,
                     )
+                if comment.user.email_reply:
+                    send_like_email.delay(comment.user.id, comment.comment_text, False, comment.story.slug)
 
 
 class UserStoryViewCreate(CreateAPIView):
@@ -414,7 +422,7 @@ class UserStoryViewCreate(CreateAPIView):
 
         views_count = UserStoryView.objects.filter(user=self.request.user).count()
         if views_count >= 3:
-            commentor_group, created = Group.objects.get_or_create(name="commentor")
+            commentor_group, _ = Group.objects.get_or_create(name="commentor")
             self.request.user.groups.add(commentor_group)
             self.request.user.save()
 
