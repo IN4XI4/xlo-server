@@ -12,7 +12,7 @@ TEMPLATES_MAPPING = {
 @shared_task
 def send_info_emails(subject, body, template):
     users_to_notify = CustomUser.objects.filter(email_info=True)
-    from_email = "Mixelo Notifications <contact@mixelo.io>"
+    from_email = "Mixelo Newsletter <info@mixelo.io>"
     for user in users_to_notify:
         greeting_name = user.first_name if user.first_name else user.email
         template_name = TEMPLATES_MAPPING.get(template, "send_info_email_username.html")
