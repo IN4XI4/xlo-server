@@ -1,10 +1,13 @@
 from celery import shared_task
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
+from django.contrib.contenttypes.models import ContentType
 
 from .models import RecallCard
 
 FROM_EMAIL_TEXT = "Mixelo Notifications <contact@mixelo.io>"
+
+
 @shared_task
 def send_weekly_recall_email():
     from django.contrib.auth import get_user_model
@@ -52,15 +55,26 @@ def send_like_email(user_id, comment, reply=False, story_slug=None):
 
 
 @shared_task
-def send_new_stories_email():
+def send_new_stories_email(topic_id):
     from django.contrib.auth import get_user_model
+    from apps.base.models import Topic
 
-    user = get_user_model()
-    users = user.objects.filter(email_new_stories=True)
-    subject = "New stories Alert"
+    topic_content_type = ContentType.objects.get_for_model(Topic)
+    users = get_user_model().objects.filter(
+        email_new_stories=True,
+        like__content_type=topic_content_type,
+        like__object_id=topic_id,
+        like__liked=True,
+    )
+    topic_title = Topic.objects.filter(id=topic_id).values_list("title", flat=True).first()
+    words = topic_title.split()
+    trimmed_title = " ".join(words[:7]) + ("..." if len(words) > 7 else "")
+    subject = f"New stories Alert | {trimmed_title}"
     from_email = FROM_EMAIL_TEXT
     for user in users:
         greeting_name = user.first_name if user.first_name else user.email
-        html_message = render_to_string("new_stories_email.html", {"greeting_name": greeting_name})
+        html_message = render_to_string(
+            "new_stories_email.html", {"greeting_name": greeting_name, "topic_title": topic_title}
+        )
         recipient_list = [user.email]
         send_mail(subject, "", from_email, recipient_list, html_message=html_message)

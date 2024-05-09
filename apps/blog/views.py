@@ -245,7 +245,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
                 else:
                     return Response(block_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         # Send to interested users:
-        send_new_stories_email.delay()
+        send_new_stories_email.delay(story.topic.id)
 
         return Response(story_serializer.data, status=status.HTTP_201_CREATED)
 
@@ -399,8 +399,8 @@ class LikesViewSet(viewsets.ModelViewSet):
                         content_type=ContentType.objects.get_for_model(Like),
                         object_id=like_instance.id,
                     )
-                if comment.user.email_reply:
-                    send_like_email.delay(comment.user.id, comment.comment_text, False, comment.story.slug)
+                    if comment.user.email_reply:
+                        send_like_email.delay(comment.user.id, comment.comment_text, False, comment.story.slug)
 
 
 class UserStoryViewCreate(CreateAPIView):
