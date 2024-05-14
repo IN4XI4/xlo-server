@@ -46,8 +46,8 @@ python manage.py createsuperuser
 
 ### Step 6: Start Celery Worker and Beat
 ```bash
-celery -A your_project_name worker --loglevel=info &
-celery -A your_project_name beat --loglevel=info &
+celery -A xloserver worker --loglevel=info &
+celery -A xloserver beat --loglevel=info &
 ```
 
 ### Step 7: Run the Development Server
