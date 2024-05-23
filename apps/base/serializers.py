@@ -80,7 +80,7 @@ class SoftSkillSerializerDetails(serializers.ModelSerializer):
     def get_cards_viewed_percentage(self, obj):
         user_id = self.context["request"].user.id
         total_cards = Card.objects.filter(soft_skill=obj).count()
-        cards_seen_count = UserCardView.objects.filter(user=user_id).count()
+        cards_seen_count = UserCardView.objects.filter(user=user_id, card__soft_skill=obj).count()
 
         if total_cards > 0:
             percentage = (cards_seen_count / total_cards) * 100

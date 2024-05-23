@@ -41,7 +41,7 @@ from apps.base.models import Topic
 
 
 class BlocksPagination(PageNumberPagination):
-    page_size = 5
+    page_size = 20
 
 
 class NotificationsPagination(PageNumberPagination):
