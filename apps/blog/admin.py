@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, RecallCard, Notification
+from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, UserCardView, RecallCard, Notification
 
 
 @admin.register(Story)
@@ -53,6 +53,14 @@ class UserStoryViewAdmin(admin.ModelAdmin):
     list_display = ("user", "story")
     list_filter = ("user__username", "story")
     search_fields = ("user", "story")
+    list_per_page = 100
+
+
+@admin.register(UserCardView)
+class UserCardViewAdmin(admin.ModelAdmin):
+    list_display = ("user", "card")
+    list_filter = ("user__username", "card")
+    search_fields = ("user", "card")
     list_per_page = 100
 
 

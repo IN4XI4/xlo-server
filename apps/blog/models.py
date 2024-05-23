@@ -122,6 +122,14 @@ class UserStoryView(models.Model):
         unique_together = ("user", "story")
 
 
+class UserCardView(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    card = models.ForeignKey(Card, on_delete=models.CASCADE, related_name="user_card_views")
+
+    class Meta:
+        unique_together = ("user", "card")
+
+
 class RecallCard(models.Model):
     IMPORTANCE_LEVELS = [
         ("1", "Important"),

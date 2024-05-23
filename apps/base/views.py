@@ -11,6 +11,7 @@ from .serializers import (
     TopicTagSerializer,
     TopicSerializer,
     SoftSkillSerializer,
+    SoftSkillSerializerDetails,
     MentorSerializer,
     ContentTypeSerializer,
 )
@@ -56,6 +57,12 @@ class SoftSkillsViewSet(viewsets.ReadOnlyModelViewSet):
         "name": ("exact", "icontains"),
     }
     pagination_class = CustomPagination
+
+    @action(detail=False, methods=["get"])
+    def detailed_list(self, request):
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = SoftSkillSerializerDetails(queryset, many=True, context={"request": request})
+        return Response(serializer.data)
 
 
 class MentorsViewSet(viewsets.ReadOnlyModelViewSet):

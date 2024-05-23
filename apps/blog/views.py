@@ -1,3 +1,5 @@
+import random
+
 from django.db import transaction
 from django.db.models import F, OuterRef, Subquery
 from django.shortcuts import get_object_or_404
@@ -11,7 +13,7 @@ from rest_framework.parsers import MultiPartParser, JSONParser, FormParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, RecallCard, Notification
+from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, UserCardView, RecallCard, Notification
 from .permissions import (
     StoryPermissions,
     CardPermissions,
@@ -39,7 +41,7 @@ from apps.base.models import Topic
 
 
 class BlocksPagination(PageNumberPagination):
-    page_size = 20
+    page_size = 5
 
 
 class NotificationsPagination(PageNumberPagination):
@@ -252,12 +254,13 @@ class StoriesViewSet(viewsets.ModelViewSet):
 
 class CardsViewSet(viewsets.ModelViewSet):
     serializer_class = CardSerializer
-    parser_classes = (MultiPartParser,)
+    parser_classes = (MultiPartParser, JSONParser)
     permission_classes = [CardPermissions]
     filterset_fields = {
         "title": ("icontains",),
         "story": ("exact", "in"),
         "soft_skill": ("exact", "in"),
+        "soft_skill__name": ("exact",),
         "mentor": ("exact", "in"),
         "created_time": ("gte", "lte"),
         "updated_time": ("gte", "lte"),
@@ -281,6 +284,27 @@ class CardsViewSet(viewsets.ModelViewSet):
         if self.action == "list":
             return [AllowAny()]
         return [permission() for permission in self.permission_classes]
+
+    @action(detail=False, methods=["post"], url_path="random-by-softskill")
+    def random_by_softskill(self, request):
+        soft_skill_name = request.data.get("soft_skill")
+        seed = request.data.get("seed")
+        if not soft_skill_name:
+            return Response({"detail": "soft_skill_name parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not seed:
+            return Response({"detail": "seed parameter is required."}, status=status.HTTP_400_BAD_REQUEST)
+        filtered_cards = Card.objects.filter(soft_skill__name__icontains=soft_skill_name)
+        filtered_cards_list = list(filtered_cards)
+        random.seed(seed)
+        random.shuffle(filtered_cards_list)
+
+        page = self.paginate_queryset(filtered_cards_list)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(filtered_cards_list, many=True)
+        return Response(serializer.data)
 
 
 class BlockTypesViewSet(viewsets.ReadOnlyModelViewSet):
@@ -322,6 +346,15 @@ class BlocksViewSet(viewsets.ModelViewSet):
         if self.action == "list":
             return [AllowAny()]
         return [permission() for permission in self.permission_classes]
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        if request.user.is_authenticated and "card" in request.query_params:
+            card_id = request.query_params.get("card")
+            if card_id:
+                card = get_object_or_404(Card, id=card_id)
+                UserCardView.objects.get_or_create(user=request.user, card=card)
+        return response
 
 
 class CommentsViewSet(viewsets.ModelViewSet):

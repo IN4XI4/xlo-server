@@ -2,7 +2,7 @@ from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
 from .models import TopicTag, Topic, SoftSkill, Mentor
-from apps.blog.models import Like
+from apps.blog.models import Like, Card, UserCardView
 
 
 class TopicReadOnlySerializer(serializers.ModelSerializer):
@@ -68,6 +68,24 @@ class SoftSkillSerializer(serializers.ModelSerializer):
     class Meta:
         model = SoftSkill
         fields = "__all__"
+
+
+class SoftSkillSerializerDetails(serializers.ModelSerializer):
+    cards_viewed_percentage = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SoftSkill
+        fields = "__all__"
+
+    def get_cards_viewed_percentage(self, obj):
+        user_id = self.context["request"].user.id
+        total_cards = Card.objects.filter(soft_skill=obj).count()
+        cards_seen_count = UserCardView.objects.filter(user=user_id).count()
+
+        if total_cards > 0:
+            percentage = (cards_seen_count / total_cards) * 100
+            return round(percentage, 2)
+        return 0
 
 
 class MentorSerializer(serializers.ModelSerializer):
