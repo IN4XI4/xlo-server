@@ -36,7 +36,7 @@ from .serializers import (
     RecallCardDetailSerializer,
     NotificationSerializer,
 )
-from .tasks import send_like_email, send_new_stories_email
+from .tasks import send_like_email, send_new_stories_email, send_ask_for_help_email
 from apps.base.models import Topic
 
 
@@ -317,7 +317,6 @@ class BlockTypesViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class BlocksViewSet(viewsets.ModelViewSet):
-    queryset = Block.objects.all().order_by("id")
     serializer_class = BlockSerializer
     permission_classes = [BlockPermissions]
     pagination_class = BlocksPagination
@@ -391,6 +390,10 @@ class CommentsViewSet(viewsets.ModelViewSet):
                         send_like_email.delay(
                             comment.parent.user.id, comment.parent.comment_text, True, comment.story.slug
                         )
+            if comment.ask_for_help:
+                send_ask_for_help_email.delay(
+                    comment.user.id, comment.comment_text, comment.story.title, comment.story.slug
+                )
 
     def get_queryset(self):
         if self.request.user.is_authenticated:
