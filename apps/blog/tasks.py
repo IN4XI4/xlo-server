@@ -99,5 +99,5 @@ def send_ask_for_help_email(user_id, comment, story_title, story_slug):
             "story_slug": story_slug,
         },
     )
-    recipient_list = ["juankrios15@gmail.com"]
+    recipient_list = ["support@mixelo.io"]
     send_mail(subject, "", FROM_EMAIL_TEXT, recipient_list, html_message=html_message)
