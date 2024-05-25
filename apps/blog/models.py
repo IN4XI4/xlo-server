@@ -108,6 +108,7 @@ class Comment(models.Model):
     is_active = models.BooleanField(default=False)
     created_time = models.DateTimeField(auto_now=False, auto_now_add=True)
     updated_time = models.DateTimeField(auto_now=True)
+    ask_for_help = models.BooleanField(default=False)
     likes = GenericRelation(Like)
 
     def __str__(self):

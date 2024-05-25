@@ -78,3 +78,26 @@ def send_new_stories_email(topic_id):
         )
         recipient_list = [user.email]
         send_mail(subject, "", from_email, recipient_list, html_message=html_message)
+
+
+@shared_task
+def send_ask_for_help_email(user_id, comment, story_title, story_slug):
+    from django.contrib.auth import get_user_model
+
+    user_model = get_user_model()
+    user = user_model.objects.get(id=user_id)
+    username = user.first_name if user.first_name else user.email
+    words = story_title.split()
+    story_short = " ".join(words[:7]) + ("..." if len(words) > 7 else "")
+    subject = f"Someone is asking for help | Story: {story_short}"
+    html_message = render_to_string(
+        "ask_help_email.html",
+        {
+            "user": username,
+            "story": story_short,
+            "comment": comment,
+            "story_slug": story_slug,
+        },
+    )
+    recipient_list = ["support@mixelo.io"]
+    send_mail(subject, "", FROM_EMAIL_TEXT, recipient_list, html_message=html_message)

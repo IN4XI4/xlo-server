@@ -19,6 +19,7 @@ class StoryDetailSerializer(serializers.ModelSerializer):
     user_has_liked = serializers.SerializerMethodField()
     user_has_viewed = serializers.SerializerMethodField()
     topic_title = serializers.ReadOnlyField(source="topic.title")
+    topic_slug = serializers.ReadOnlyField(source="topic.slug")
     tag_name = serializers.ReadOnlyField(source="topic.tag.name")
 
     class Meta:
