@@ -18,6 +18,8 @@ class StoryDetailSerializer(serializers.ModelSerializer):
     card_colors = serializers.SerializerMethodField()
     user_has_liked = serializers.SerializerMethodField()
     user_has_viewed = serializers.SerializerMethodField()
+    previous_story_slug = serializers.SerializerMethodField()
+    next_story_slug = serializers.SerializerMethodField()
     topic_title = serializers.ReadOnlyField(source="topic.title")
     topic_slug = serializers.ReadOnlyField(source="topic.slug")
     tag_name = serializers.ReadOnlyField(source="topic.tag.name")
@@ -57,6 +59,17 @@ class StoryDetailSerializer(serializers.ModelSerializer):
             return False
         return UserStoryView.objects.filter(user=user, story=obj).exists()
 
+    def get_previous_story_slug(self, obj):
+        previous_story = Story.objects.filter(topic=obj.topic, id__lt=obj.id).order_by('-id').first()
+        if previous_story:
+            return previous_story.slug
+        return None
+
+    def get_next_story_slug(self, obj):
+        next_story = Story.objects.filter(topic=obj.topic, id__gt=obj.id).order_by('id').first()
+        if next_story:
+            return next_story.slug
+        return None
 
 class CardSerializer(serializers.ModelSerializer):
     soft_skill_color = serializers.ReadOnlyField(source="soft_skill.color")
