@@ -13,7 +13,19 @@ from rest_framework.parsers import MultiPartParser, JSONParser, FormParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, UserCardView, RecallCard, Notification
+from .models import (
+    Story,
+    Card,
+    BlockType,
+    Block,
+    Comment,
+    Like,
+    UserStoryView,
+    UserCardView,
+    RecallCard,
+    RecallBlock,
+    Notification,
+)
 from .permissions import (
     StoryPermissions,
     CardPermissions,
@@ -34,6 +46,7 @@ from .serializers import (
     UserStoryViewSerializer,
     RecallCardSerializer,
     RecallCardDetailSerializer,
+    RecallBlockSerializer,
     NotificationSerializer,
 )
 from .tasks import send_like_email, send_new_stories_email, send_ask_for_help_email
@@ -490,6 +503,21 @@ class RecallCardViewSet(viewsets.ModelViewSet):
         combined_cards = list(very_important_cards) + list(important_cards)
         serializer = self.get_serializer(combined_cards, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class RecallBlockViewSet(viewsets.ModelViewSet):
+    serializer_class = RecallBlockSerializer
+    permission_classes = [RecallLikePermissions]
+    queryset = RecallBlock.objects.all()
+    filterset_fields = {
+        "user": ("exact",),
+        "block": ("exact",),
+        "created_time": ("gte", "lte"),
+        "updated_time": ("gte", "lte"),
+    }
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class NotificationViewSet(viewsets.ModelViewSet):

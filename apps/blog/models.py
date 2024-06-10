@@ -146,6 +146,21 @@ class RecallCard(models.Model):
         unique_together = ("user", "card")
 
 
+class RecallBlock(models.Model):
+    IMPORTANCE_LEVELS = [
+        ("1", "Important"),
+        ("2", "Vert Important"),
+    ]
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    block = models.ForeignKey(Block, on_delete=models.CASCADE, related_name="block_to_recall")
+    importance_level = models.CharField(max_length=1, choices=IMPORTANCE_LEVELS, default="1")
+    created_time = models.DateTimeField(auto_now=False, auto_now_add=True)
+    updated_time = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("user", "block")
+
+
 class Notification(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="notifications")
     date = models.DateTimeField(auto_now_add=True)
