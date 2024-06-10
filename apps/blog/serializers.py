@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
-from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, RecallCard, Notification
+from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, RecallCard, RecallBlock, Notification
 
 
 class StorySerializer(serializers.ModelSerializer):
@@ -60,16 +60,17 @@ class StoryDetailSerializer(serializers.ModelSerializer):
         return UserStoryView.objects.filter(user=user, story=obj).exists()
 
     def get_previous_story_slug(self, obj):
-        previous_story = Story.objects.filter(topic=obj.topic, id__lt=obj.id).order_by('-id').first()
+        previous_story = Story.objects.filter(topic=obj.topic, id__lt=obj.id).order_by("-id").first()
         if previous_story:
             return previous_story.slug
         return None
 
     def get_next_story_slug(self, obj):
-        next_story = Story.objects.filter(topic=obj.topic, id__gt=obj.id).order_by('id').first()
+        next_story = Story.objects.filter(topic=obj.topic, id__gt=obj.id).order_by("id").first()
         if next_story:
             return next_story.slug
         return None
+
 
 class CardSerializer(serializers.ModelSerializer):
     soft_skill_color = serializers.ReadOnlyField(source="soft_skill.color")
@@ -113,6 +114,7 @@ class BlockTypeSerializer(serializers.ModelSerializer):
 class BlockSerializer(serializers.ModelSerializer):
     block_type_name = serializers.ReadOnlyField(source="block_type.name")
     user_has_liked = serializers.SerializerMethodField()
+    user_has_recalled = serializers.SerializerMethodField()
 
     class Meta:
         model = Block
@@ -125,6 +127,16 @@ class BlockSerializer(serializers.ModelSerializer):
         content_type = ContentType.objects.get_for_model(obj)
         like = Like.objects.filter(user=user, content_type=content_type.id, object_id=obj.id, is_active=True).first()
         return like.id if like else False
+
+    def get_user_has_recalled(self, obj):
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return {"recall": False, "level": None, "recall_id": None}
+        recall = RecallBlock.objects.filter(user=user, block=obj).first()
+        if recall:
+            return {"recall": True, "level": recall.importance_level, "recall_id": recall.id}
+        else:
+            return {"recall": False, "level": None, "recall_id": None}
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -172,6 +184,18 @@ class RecallCardSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RecallCard
+        fields = "__all__"
+        read_only_fields = (
+            "created_time",
+            "updated_time",
+            "user",
+        )
+
+
+class RecallBlockSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = RecallBlock
         fields = "__all__"
         read_only_fields = (
             "created_time",
