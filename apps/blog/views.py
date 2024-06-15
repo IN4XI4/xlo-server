@@ -342,7 +342,7 @@ class BlocksViewSet(viewsets.ModelViewSet):
         "order",
     ]
     ordering = [
-        "order",
+        "order", "id"
     ]
 
     def get_serializer_context(self):
