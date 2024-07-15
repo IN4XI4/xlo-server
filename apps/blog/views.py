@@ -529,6 +529,9 @@ class RecallBlockViewSet(viewsets.ModelViewSet):
         "importance_level", "created_time"
     ]
 
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user)
+
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
             return RecallBlockSerializer
