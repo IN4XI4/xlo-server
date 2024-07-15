@@ -11,6 +11,7 @@ from .models import (
     UserCardView,
     RecallCard,
     RecallBlock,
+    RecallComment,
     Notification,
 )
 
@@ -86,9 +87,17 @@ class RecallCardAdmin(admin.ModelAdmin):
 
 @admin.register(RecallBlock)
 class RecallBlockAdmin(admin.ModelAdmin):
-    list_display = ("user", "block")
+    list_display = ("id", "user", "block")
     list_filter = ("user__username", "block", "importance_level")
     search_fields = ("user", "block")
+    list_per_page = 100
+
+
+@admin.register(RecallComment)
+class RecallCommentAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "comment")
+    list_filter = ("user__username", "comment", "importance_level")
+    search_fields = ("user", "comment")
     list_per_page = 100
 
 

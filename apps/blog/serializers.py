@@ -1,7 +1,19 @@
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import serializers
 
-from .models import Story, Card, BlockType, Block, Comment, Like, UserStoryView, RecallCard, RecallBlock, Notification
+from .models import (
+    Story,
+    Card,
+    BlockType,
+    Block,
+    Comment,
+    Like,
+    UserStoryView,
+    RecallCard,
+    RecallBlock,
+    RecallComment,
+    Notification,
+)
 
 
 class StorySerializer(serializers.ModelSerializer):
@@ -139,12 +151,55 @@ class BlockSerializer(serializers.ModelSerializer):
             return {"recall": False, "level": None, "recall_id": None}
 
 
+class BlockDetailSerializer(serializers.ModelSerializer):
+    block_type_name = serializers.ReadOnlyField(source="block_type.name")
+    story_title = serializers.ReadOnlyField(source="card.story.title")
+    card_title = serializers.ReadOnlyField(source="card.title")
+    soft_skill_color = serializers.ReadOnlyField(source="card.soft_skill.color")
+    soft_skill_name = serializers.ReadOnlyField(source="card.soft_skill.name")
+    soft_skill_monster_name = serializers.ReadOnlyField(source="card.soft_skill.monster_name")
+    soft_skill_monster_profile = serializers.ReadOnlyField(source="card.soft_skill.monster_profile")
+    soft_skill_monster_picture = serializers.ImageField(
+        source="card.soft_skill.monster_picture", required=False, allow_null=True, use_url=True
+    )
+    mentor_color = serializers.ReadOnlyField(source="card.mentor.color")
+    mentor_name = serializers.ReadOnlyField(source="card.mentor.name")
+    mentor_job = serializers.ReadOnlyField(source="card.mentor.job")
+    mentor_profile = serializers.ReadOnlyField(source="card.mentor.profile")
+    mentor_picture = serializers.ImageField(source="card.mentor.picture", required=False, allow_null=True, use_url=True)
+    user_has_liked = serializers.SerializerMethodField()
+    user_has_recalled = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Block
+        fields = "__all__"
+
+    def get_user_has_liked(self, obj):
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return False
+        content_type = ContentType.objects.get_for_model(obj)
+        like = Like.objects.filter(user=user, content_type=content_type.id, object_id=obj.id, is_active=True).first()
+        return like.id if like else False
+
+    def get_user_has_recalled(self, obj):
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return {"recall": False, "level": None, "recall_id": None}
+        recall = RecallBlock.objects.filter(user=user, block=obj).first()
+        if recall:
+            return {"recall": True, "level": recall.importance_level, "recall_id": recall.id}
+        else:
+            return {"recall": False, "level": None, "recall_id": None}
+
+
 class CommentSerializer(serializers.ModelSerializer):
     replies_count = serializers.SerializerMethodField()
     user_name = serializers.ReadOnlyField(source="user.first_name")
     user_picture = serializers.ImageField(source="user.profile_picture", required=False, allow_null=True, use_url=True)
     formatted_created_time = serializers.SerializerMethodField()
     user_has_liked = serializers.SerializerMethodField()
+    user_has_recalled = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
@@ -164,6 +219,16 @@ class CommentSerializer(serializers.ModelSerializer):
         content_type = ContentType.objects.get_for_model(obj)
         like = Like.objects.filter(user=user, content_type=content_type.id, object_id=obj.id, is_active=True).first()
         return like.id if like else False
+
+    def get_user_has_recalled(self, obj):
+        user = self.context["request"].user
+        if user.is_anonymous:
+            return {"recall": False, "level": None, "recall_id": None}
+        recall = RecallComment.objects.filter(user=user, comment=obj).first()
+        if recall:
+            return {"recall": True, "level": recall.importance_level, "recall_id": recall.id}
+        else:
+            return {"recall": False, "level": None, "recall_id": None}
 
 
 class LikeSerializer(serializers.ModelSerializer):
@@ -196,6 +261,31 @@ class RecallBlockSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = RecallBlock
+        fields = "__all__"
+        read_only_fields = (
+            "created_time",
+            "updated_time",
+            "user",
+        )
+
+
+class RecallBlockDetailSerializer(serializers.ModelSerializer):
+    block = BlockDetailSerializer()
+
+    class Meta:
+        model = RecallBlock
+        fields = "__all__"
+        read_only_fields = (
+            "created_time",
+            "updated_time",
+            "user",
+        )
+
+
+class RecallCommentSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = RecallComment
         fields = "__all__"
         read_only_fields = (
             "created_time",

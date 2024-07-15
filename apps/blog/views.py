@@ -24,6 +24,7 @@ from .models import (
     UserCardView,
     RecallCard,
     RecallBlock,
+    RecallComment,
     Notification,
 )
 from .permissions import (
@@ -43,10 +44,13 @@ from .serializers import (
     LikeSerializer,
     BlockTypeSerializer,
     BlockSerializer,
+    BlockDetailSerializer,
     UserStoryViewSerializer,
     RecallCardSerializer,
     RecallCardDetailSerializer,
     RecallBlockSerializer,
+    RecallBlockDetailSerializer,
+    RecallCommentSerializer,
     NotificationSerializer,
 )
 from .tasks import send_like_email, send_new_stories_email, send_ask_for_help_email
@@ -341,12 +345,18 @@ class BlocksViewSet(viewsets.ModelViewSet):
     ordering_fields = [
         "order",
     ]
-    ordering = [
-        "order", "id"
-    ]
+    ordering = ["order", "id"]
 
     def get_serializer_context(self):
         return {"request": self.request}
+
+    def get_serializer_class(self):
+        """
+        Return the class to use for the serializer.
+        """
+        if self.action in ["retrieve",]:
+            return BlockDetailSerializer
+        return BlockSerializer
 
     def get_queryset(self):
         if self.request.user.is_authenticated:
@@ -506,12 +516,56 @@ class RecallCardViewSet(viewsets.ModelViewSet):
 
 
 class RecallBlockViewSet(viewsets.ModelViewSet):
-    serializer_class = RecallBlockSerializer
     permission_classes = [RecallLikePermissions]
     queryset = RecallBlock.objects.all()
     filterset_fields = {
         "user": ("exact",),
         "block": ("exact",),
+        "created_time": ("gte", "lte"),
+        "updated_time": ("gte", "lte"),
+    }
+
+    ordering_fields = [
+        "importance_level", "created_time"
+    ]
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return RecallBlockSerializer
+        return RecallBlockDetailSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=False, methods=["get"], url_path="random-recalled-block-ids")
+    def random_recalled_block_ids(self, request):
+        user = request.user
+        very_important_block_ids = list(
+            RecallBlock.objects.filter(user=user, importance_level="2")
+            .order_by("?")
+            .values_list("block__id", flat=True)
+        )
+        important_block_ids = list(
+            RecallBlock.objects.filter(user=user, importance_level="1")
+            .order_by("?")
+            .values_list("block__id", flat=True)
+        )
+        combined_ids = very_important_block_ids + important_block_ids
+        block_content_type = ContentType.objects.get_for_model(Block).id
+        response_data = {
+        "block_ids": combined_ids,
+        "block_content_type": block_content_type
+    }
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class RecallCommentViewSet(viewsets.ModelViewSet):
+    serializer_class = RecallCommentSerializer
+    permission_classes = [RecallLikePermissions]
+    queryset = RecallComment.objects.all()
+    filterset_fields = {
+        "user": ("exact",),
+        "comment": ("exact",),
         "created_time": ("gte", "lte"),
         "updated_time": ("gte", "lte"),
     }

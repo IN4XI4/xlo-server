@@ -11,6 +11,7 @@ from .views import (
     UserStoryViewCreate,
     RecallCardViewSet,
     RecallBlockViewSet,
+    RecallCommentViewSet,
     NotificationViewSet
 )
 
@@ -26,6 +27,7 @@ router.register(r"blocktypes", BlockTypesViewSet, basename="blocktypes")
 router.register(r"blocks", BlocksViewSet, basename="blocks")
 router.register(r"recalls", RecallCardViewSet, basename="recalls")
 router.register(r"recall-blocks", RecallBlockViewSet, basename="recalls-blocks")
+router.register(r"recall-comments", RecallCommentViewSet, basename="recalls-comments")
 router.register(r"notifications", NotificationViewSet, basename="notifications")
 
 
