@@ -155,6 +155,8 @@ class BlockDetailSerializer(serializers.ModelSerializer):
     block_type_name = serializers.ReadOnlyField(source="block_type.name")
     story_title = serializers.ReadOnlyField(source="card.story.title")
     card_title = serializers.ReadOnlyField(source="card.title")
+    soft_skill_description = serializers.ReadOnlyField(source="card.soft_skill.description")
+    soft_skill_logo = serializers.FileField(source="card.soft_skill.logo", required=False, allow_null=True, use_url=True)
     soft_skill_color = serializers.ReadOnlyField(source="card.soft_skill.color")
     soft_skill_name = serializers.ReadOnlyField(source="card.soft_skill.name")
     soft_skill_monster_name = serializers.ReadOnlyField(source="card.soft_skill.monster_name")
