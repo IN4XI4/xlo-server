@@ -32,6 +32,7 @@ class StoryDetailSerializer(serializers.ModelSerializer):
     user_has_viewed = serializers.SerializerMethodField()
     previous_story_slug = serializers.SerializerMethodField()
     next_story_slug = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
     topic_title = serializers.ReadOnlyField(source="topic.title")
     topic_slug = serializers.ReadOnlyField(source="topic.slug")
     tag_name = serializers.ReadOnlyField(source="topic.tag.name")
@@ -70,6 +71,9 @@ class StoryDetailSerializer(serializers.ModelSerializer):
         if user.is_anonymous:
             return False
         return UserStoryView.objects.filter(user=user, story=obj).exists()
+
+    def get_is_owner(self, obj):
+        return obj.user == self.context["request"].user
 
     def get_previous_story_slug(self, obj):
         previous_story = Story.objects.filter(topic=obj.topic, id__lt=obj.id).order_by("-id").first()

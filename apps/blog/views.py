@@ -5,6 +5,7 @@ from django.db.models import F, OuterRef, Subquery
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status
 from rest_framework.generics import CreateAPIView
 from rest_framework.decorators import action
@@ -12,6 +13,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.parsers import MultiPartParser, JSONParser, FormParser
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.filters import OrderingFilter
 
 from .models import (
     Story,
@@ -55,6 +57,7 @@ from .serializers import (
 )
 from .tasks import send_like_email, send_new_stories_email, send_ask_for_help_email
 from apps.base.models import Topic
+from .filters import UserOwnedFilterBackend
 
 
 class BlocksPagination(PageNumberPagination):
@@ -77,12 +80,9 @@ class StoriesViewSet(viewsets.ModelViewSet):
         "user__username": ("icontains",),
         "is_active": ("exact",),
     }
-    ordering_fields = [
-        "created_time",
-    ]
-    ordering = [
-        "created_time",
-    ]
+    ordering_fields = ["created_time"]
+    ordering = ["created_time"]
+    filter_backends = [UserOwnedFilterBackend, DjangoFilterBackend, OrderingFilter]
 
     def get_serializer_class(self):
         """
@@ -100,7 +100,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
         Returns:
         - QuerySet: A queryset of Story objects.
         """
-        return Story.objects.filter(is_active=True).order_by("id")
+        return Story.objects.filter(is_active=True)
 
     def get_permissions(self):
         """
@@ -142,7 +142,6 @@ class StoriesViewSet(viewsets.ModelViewSet):
         Returns:
         - Response: Serialized story data with a status of HTTP 201 CREATED.
         """
-
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         story = serializer.save()
@@ -218,6 +217,38 @@ class StoriesViewSet(viewsets.ModelViewSet):
         serializer = StoryDetailSerializer(stories_queryset, many=True, context={"request": request})
         return Response(serializer.data)
 
+    @action(detail=True, methods=["get"], url_path="get-story-full")
+    def get_story_full(self, request, pk=None):
+        try:
+            story = Story.objects.get(id=pk, user=request.user)
+        except Story.DoesNotExist:
+            return Response({"error": "Story not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        cards = Card.objects.filter(story=story).order_by("id")
+        story_data = {"title": story.title, "subtitle": story.subtitle, "slug": story.slug, "cards": []}
+        for card in cards:
+            blocks = Block.objects.filter(card=card).order_by("id")
+            blocks_data = [
+                {
+                    "id": block.id,
+                    "content": block.content,
+                    "blockType": block.block_type.id,
+                    "image": request.build_absolute_uri(block.image.url) if block.image else None,
+                }
+                for block in blocks
+            ]
+
+            story_data["cards"].append(
+                {
+                    "id": card.id,
+                    "cardTitle": card.title,
+                    "selectedSoftSkill": card.soft_skill.id if card.soft_skill else None,
+                    "selectedMentor": card.mentor.id if card.mentor else None,
+                    "blocks": blocks_data,
+                }
+            )
+        return Response(story_data, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=["post"], url_path="create-story-full")
     def create_story_full(self, request, *args, **kwargs):
         data = request.data
@@ -226,7 +257,6 @@ class StoriesViewSet(viewsets.ModelViewSet):
             "subtitle": data.get("subtitle"),
             "topic": data.get("topic"),
         }
-
         story_serializer = StorySerializer(data=story_data)
         if story_serializer.is_valid():
             story = story_serializer.save(user=request.user, is_active=True)
@@ -267,6 +297,90 @@ class StoriesViewSet(viewsets.ModelViewSet):
         send_new_stories_email.delay(story.topic.id)
 
         return Response(story_serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["put"], url_path="update-story-full")
+    def update_story_full(self, request, pk=None):
+        try:
+            story = Story.objects.get(id=pk, user=request.user)
+        except Story.DoesNotExist:
+            return Response({"error": "Story not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = request.data
+        story_data = {
+            "title": data.get("title"),
+            "subtitle": data.get("subtitle"),
+        }
+        story_serializer = StorySerializer(story, data=story_data, partial=True)
+        if story_serializer.is_valid():
+            story = story_serializer.save()
+        else:
+            return Response(story_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        cards_keys = [key for key in request.data.keys() if key.startswith("cards[")]
+        cards_count = len(set(key.split("[")[1].split("]")[0] for key in cards_keys))
+        existing_card_ids = []
+
+        for card_index in range(cards_count):
+            card_id = request.data.get(f"cards[{card_index}].id")
+            card_data = {
+                "story": story.id,
+                "title": request.data.get(f"cards[{card_index}].cardTitle"),
+                "soft_skill": request.data.get(f"cards[{card_index}].selectedSoftSkill"),
+                "mentor": request.data.get(f"cards[{card_index}].selectedMentor"),
+            }
+            if card_id:
+                try:
+                    card = Card.objects.get(id=card_id, story=story)
+                    card_serializer = CardSerializer(card, data=card_data, partial=True)
+                    existing_card_ids.append(card_id)
+                except Card.DoesNotExist:
+                    return Response({"error": f"Card with ID {card_id} not found."}, status=status.HTTP_404_NOT_FOUND)
+            else:
+                card_serializer = CardSerializer(data=card_data)
+
+            if card_serializer.is_valid():
+                card = card_serializer.save()
+            else:
+                return Response(card_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            self.handle_blocks(request, card, card_index)
+
+        Card.objects.filter(story=story).exclude(id__in=existing_card_ids).delete()
+        return Response(story_serializer.data, status=status.HTTP_200_OK)
+
+    def handle_blocks(self, request, card, card_index):
+        blocks_keys = [key for key in request.data.keys() if key.startswith(f"cards[{card_index}].blocks[")]
+        blocks_count = len(set(key.split("[")[2].split("]")[0] for key in blocks_keys))
+
+        existing_block_ids = []
+        for block_index in range(blocks_count):
+            block_id = request.data.get(f"cards[{card_index}].blocks[{block_index}].id")
+            block_data = {
+                "card": card.id,
+                "content": request.data.get(f"cards[{card_index}].blocks[{block_index}].content"),
+                "block_type": request.data.get(f"cards[{card_index}].blocks[{block_index}].blockType"),
+            }
+            if block_id:
+                try:
+                    block = Block.objects.get(id=block_id, card=card)
+                    block_serializer = BlockSerializer(block, data=block_data, partial=True)
+                    if block.image and not request.FILES.get(f"cards[{card_index}].blocks[{block_index}].image"):
+                        if not request.data.get(f"cards[{card_index}].blocks[{block_index}].image"):
+                            block.image = None
+                    elif f"cards[{card_index}].blocks[{block_index}].image" in request.FILES:
+                        block_data["image"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image"]
+
+                    existing_block_ids.append(block_id)
+                except Block.DoesNotExist:
+                    return Response({"error": f"Block with ID {block_id} not found."}, status=status.HTTP_404_NOT_FOUND)
+            else:
+                block_serializer = BlockSerializer(data=block_data)
+
+            if block_serializer.is_valid():
+                block_serializer.save()
+            else:
+                return Response(block_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        Block.objects.filter(card=card).exclude(id__in=existing_block_ids).delete()
 
 
 class CardsViewSet(viewsets.ModelViewSet):
@@ -354,7 +468,7 @@ class BlocksViewSet(viewsets.ModelViewSet):
         """
         Return the class to use for the serializer.
         """
-        if self.action in ["retrieve",]:
+        if self.action in ["retrieve"]:
             return BlockDetailSerializer
         return BlockSerializer
 
@@ -525,15 +639,13 @@ class RecallBlockViewSet(viewsets.ModelViewSet):
         "updated_time": ("gte", "lte"),
     }
 
-    ordering_fields = [
-        "importance_level", "created_time"
-    ]
+    ordering_fields = ["importance_level", "created_time"]
 
     def get_queryset(self):
         return RecallBlock.objects.filter(user=self.request.user)
 
     def get_serializer_class(self):
-        if self.action in ['create', 'update', 'partial_update']:
+        if self.action in ["create", "update", "partial_update"]:
             return RecallBlockSerializer
         return RecallBlockDetailSerializer
 
@@ -555,10 +667,7 @@ class RecallBlockViewSet(viewsets.ModelViewSet):
         )
         combined_ids = very_important_block_ids + important_block_ids
         block_content_type = ContentType.objects.get_for_model(Block).id
-        response_data = {
-        "block_ids": combined_ids,
-        "block_content_type": block_content_type
-    }
+        response_data = {"block_ids": combined_ids, "block_content_type": block_content_type}
         return Response(response_data, status=status.HTTP_200_OK)
 
 
