@@ -13,8 +13,12 @@ from .serializers import (
     SoftSkillSerializer,
     SoftSkillSerializerDetails,
     MentorSerializer,
+    MentorCreateSerializer,
     ContentTypeSerializer,
 )
+from .permissions import MentorPermissions
+from apps.users.utils import get_user_level
+from xloserver.constants import LEVEL_GROUPS
 
 
 class CustomPagination(PageNumberPagination):
@@ -65,14 +69,33 @@ class SoftSkillsViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(serializer.data)
 
 
-class MentorsViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Mentor.objects.all().order_by("id")
-    serializer_class = MentorSerializer
-    permission_classes = [IsAuthenticated]
+class MentorsViewSet(viewsets.ModelViewSet):
+    permission_classes = [MentorPermissions]
     filterset_fields = {
         "name": ("exact", "icontains"),
+        "user": ("exact",),
+        "created_by": ("exact",),
     }
     pagination_class = CustomPagination
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return MentorCreateSerializer
+        return MentorSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        user_level = get_user_level(user)
+        queryset = Mentor.objects.filter(user__isnull=True)
+
+        if user_level >= LEVEL_GROUPS["creator lvl 2"]:
+            queryset = queryset | Mentor.objects.filter(user=user)
+        if user_level >= LEVEL_GROUPS["creator lvl 3"]:
+            queryset = queryset | Mentor.objects.filter(created_by=user)
+        return queryset.order_by("id")
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
 
 
 class ContentTypeListView(generics.ListAPIView):

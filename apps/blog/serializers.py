@@ -98,11 +98,11 @@ class CardSerializer(serializers.ModelSerializer):
     soft_skill_name = serializers.ReadOnlyField(source="soft_skill.name")
     soft_skill_description = serializers.ReadOnlyField(source="soft_skill.description")
     soft_skill_logo = serializers.FileField(source="soft_skill.logo", required=False, allow_null=True, use_url=True)
-    mentor_color = serializers.ReadOnlyField(source="mentor.color")
-    mentor_name = serializers.ReadOnlyField(source="mentor.name")
-    mentor_job = serializers.ReadOnlyField(source="mentor.job")
-    mentor_profile = serializers.ReadOnlyField(source="mentor.profile")
-    mentor_picture = serializers.ImageField(source="mentor.picture", required=False, allow_null=True, use_url=True)
+    mentor_color = serializers.SerializerMethodField()
+    mentor_name = serializers.SerializerMethodField()
+    mentor_job = serializers.SerializerMethodField()
+    mentor_profile = serializers.SerializerMethodField()
+    mentor_picture = serializers.SerializerMethodField()
     user_has_recalled = serializers.SerializerMethodField()
 
     def get_user_has_recalled(self, obj):
@@ -114,6 +114,33 @@ class CardSerializer(serializers.ModelSerializer):
             return {"recall": True, "level": recall.importance_level, "recall_id": recall.id}
         else:
             return {"recall": False, "level": None, "recall_id": None}
+
+    def get_mentor_color(self, obj):
+        if obj.mentor.user and obj.mentor.user.profile_color:
+            return obj.mentor.user.profile_color.color
+        return obj.mentor.color
+
+    def get_mentor_name(self, obj):
+        if obj.mentor.user:
+            user = obj.mentor.user
+            return f"{user.first_name} {user.last_name}".strip() or user.username
+        return obj.mentor.name
+
+    def get_mentor_job(self, obj):
+        if obj.mentor.user and obj.mentor.user.profession:
+            return obj.mentor.user.profession
+        return obj.mentor.job
+
+    def get_mentor_profile(self, obj):
+        if obj.mentor.user:
+            return obj.mentor.user.biography
+        return obj.mentor.profile
+
+    def get_mentor_picture(self, obj):
+        request = self.context.get("request")
+        if obj.mentor.user and obj.mentor.user.profile_picture:
+            return request.build_absolute_uri(obj.mentor.user.profile_picture.url)
+        return request.build_absolute_uri(obj.mentor.picture.url) if obj.mentor.picture else None
 
     class Meta:
         model = Card
@@ -160,7 +187,9 @@ class BlockDetailSerializer(serializers.ModelSerializer):
     story_title = serializers.ReadOnlyField(source="card.story.title")
     card_title = serializers.ReadOnlyField(source="card.title")
     soft_skill_description = serializers.ReadOnlyField(source="card.soft_skill.description")
-    soft_skill_logo = serializers.FileField(source="card.soft_skill.logo", required=False, allow_null=True, use_url=True)
+    soft_skill_logo = serializers.FileField(
+        source="card.soft_skill.logo", required=False, allow_null=True, use_url=True
+    )
     soft_skill_color = serializers.ReadOnlyField(source="card.soft_skill.color")
     soft_skill_name = serializers.ReadOnlyField(source="card.soft_skill.name")
     soft_skill_monster_name = serializers.ReadOnlyField(source="card.soft_skill.monster_name")

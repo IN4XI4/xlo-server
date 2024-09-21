@@ -1,7 +1,8 @@
 import random
 
 from django.db import transaction
-from django.db.models import F, OuterRef, Subquery
+from django.db.models import F, OuterRef, Subquery, Q
+from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
@@ -56,8 +57,10 @@ from .serializers import (
     NotificationSerializer,
 )
 from .tasks import send_like_email, send_new_stories_email, send_ask_for_help_email
-from apps.base.models import Topic
 from .filters import UserOwnedFilterBackend
+from apps.base.models import Topic
+from apps.users.utils import get_user_level
+from xloserver.constants import LEVEL_GROUPS
 
 
 class BlocksPagination(PageNumberPagination):
@@ -100,7 +103,8 @@ class StoriesViewSet(viewsets.ModelViewSet):
         Returns:
         - QuerySet: A queryset of Story objects.
         """
-        return Story.objects.filter(is_active=True)
+        user = self.request.user
+        return Story.objects.filter(is_active=True).filter(Q(is_private=False) | Q(user=user))
 
     def get_permissions(self):
         """
@@ -225,7 +229,14 @@ class StoriesViewSet(viewsets.ModelViewSet):
             return Response({"error": "Story not found."}, status=status.HTTP_404_NOT_FOUND)
 
         cards = Card.objects.filter(story=story).order_by("id")
-        story_data = {"title": story.title, "subtitle": story.subtitle, "slug": story.slug, "cards": []}
+        story_data = {
+            "title": story.title,
+            "subtitle": story.subtitle,
+            "slug": story.slug,
+            "is_private": story.is_private,
+            "free_access": story.free_access,
+            "cards": [],
+        }
         for card in cards:
             blocks = Block.objects.filter(card=card).order_by("id")
             blocks_data = [
@@ -256,6 +267,8 @@ class StoriesViewSet(viewsets.ModelViewSet):
             "title": data.get("title"),
             "subtitle": data.get("subtitle"),
             "topic": data.get("topic"),
+            "is_private": data.get("is_private"),
+            "free_access": data.get("free_access"),
         }
         story_serializer = StorySerializer(data=story_data)
         if story_serializer.is_valid():
@@ -309,9 +322,12 @@ class StoriesViewSet(viewsets.ModelViewSet):
         story_data = {
             "title": data.get("title"),
             "subtitle": data.get("subtitle"),
+            "is_private": data.get("is_private"),
+            "free_access": data.get("free_access"),
         }
         story_serializer = StorySerializer(story, data=story_data, partial=True)
         if story_serializer.is_valid():
+            story.edited_time = timezone.now()
             story = story_serializer.save()
         else:
             return Response(story_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -585,12 +601,9 @@ class UserStoryViewCreate(CreateAPIView):
         story = get_object_or_404(Story, id=story_id)
 
         UserStoryView.objects.get_or_create(user=self.request.user, story=story)
-
-        if (
-            self.request.user.is_superuser
-            or self.request.user.is_staff
-            or self.request.user.groups.filter(name__in=["commentor", "creator"]).exists()
-        ):
+        user_level = get_user_level(self.request.user)
+        commentor_level = LEVEL_GROUPS.get("commentor", 0)
+        if self.request.user.is_superuser or self.request.user.is_staff or user_level >= commentor_level:
             return
 
         views_count = UserStoryView.objects.filter(user=self.request.user).count()

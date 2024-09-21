@@ -25,6 +25,7 @@ class SoftSkillAdmin(admin.ModelAdmin):
 
 @admin.register(Mentor)
 class MentorAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "user", "created_by")
     search_fields = ("name",)
     list_per_page = 100
 

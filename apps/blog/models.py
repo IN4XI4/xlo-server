@@ -32,13 +32,17 @@ class Story(models.Model):
     title = models.CharField(max_length=300)
     subtitle = models.CharField(max_length=300, blank=True, null=True)
     is_active = models.BooleanField(default=False)
+    is_private = models.BooleanField(default=False)
     created_time = models.DateTimeField(auto_now_add=True)
     updated_time = models.DateTimeField(auto_now=True)
+    edited_time = models.DateTimeField(null=True, blank=True)
     views_count = models.IntegerField(default=0)
     slug = models.SlugField(max_length=320, blank=True, unique=True)
     free_access = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
+        if not self.edited_time:
+            self.edited_time = self.created_time
         if not self.slug:
             title_words = self.title.split()[:7]
             short_title = " ".join(title_words)
