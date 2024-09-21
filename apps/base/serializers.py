@@ -3,6 +3,8 @@ from rest_framework import serializers
 
 from .models import TopicTag, Topic, SoftSkill, Mentor
 from apps.blog.models import Like, Card, UserCardView
+from apps.users.utils import get_user_level
+from xloserver.constants import LEVEL_GROUPS
 
 
 class TopicReadOnlySerializer(serializers.ModelSerializer):
@@ -55,9 +57,8 @@ class TopicSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         if user.is_anonymous:
             return False
-        if user.groups.filter(name="creator").exists():
-            return True
-        return user.is_staff or user.is_superuser
+        creator_level = LEVEL_GROUPS.get("creator", 0)
+        return get_user_level(user) >= creator_level or user.is_staff or user.is_superuser
 
     class Meta:
         model = Topic
@@ -89,9 +90,56 @@ class SoftSkillSerializerDetails(serializers.ModelSerializer):
 
 
 class MentorSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+    job = serializers.SerializerMethodField()
+    profile = serializers.SerializerMethodField()
+    picture = serializers.SerializerMethodField()
+    color = serializers.SerializerMethodField()
+
     class Meta:
         model = Mentor
         fields = "__all__"
+
+    def get_name(self, obj):
+        if obj.user:
+            return f"{obj.user.first_name} {obj.user.last_name}".strip() or obj.user.username
+        return obj.name
+
+    def get_job(self, obj):
+        if obj.user:
+            return obj.user.profession
+        return obj.job
+
+    def get_color(self, obj):
+        if obj.user:
+            return obj.user.profile_color.color if obj.user.profile_color else None
+        return obj.color
+
+    def get_profile(self, obj):
+        if obj.user:
+            return obj.user.biography
+        return obj.profile
+
+    def get_picture(self, obj):
+        request = self.context.get("request")
+        if obj.user and obj.user.profile_picture:
+            return request.build_absolute_uri(obj.profile_picture.url)
+        return request.build_absolute_uri(obj.picture.url) if obj.picture else None
+
+
+class MentorCreateSerializer(serializers.ModelSerializer):
+    picture = serializers.ImageField(required=False, allow_null=True)
+
+    class Meta:
+        model = Mentor
+        fields = ["name", "job", "color", "profile", "picture"]
+
+    def validate(self, data):
+        if not data.get("name"):
+            raise serializers.ValidationError("Name is required.")
+        if not data.get("job"):
+            raise serializers.ValidationError("Job is required.")
+        return data
 
 
 class ContentTypeSerializer(serializers.ModelSerializer):

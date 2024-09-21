@@ -3,7 +3,8 @@ from django_countries.serializer_fields import CountryField
 from rest_framework import serializers
 
 from .models import ProfileColor, Experience, Gender
-
+from apps.users.utils import get_user_level
+from xloserver.constants import LEVEL_GROUPS
 
 class ProfileColorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -56,8 +57,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserMeSerializer(serializers.ModelSerializer):
     picture = serializers.SerializerMethodField()
-    is_commentor = serializers.SerializerMethodField()
-    is_creator = serializers.SerializerMethodField()
+    user_level = serializers.SerializerMethodField()
     notifications = serializers.SerializerMethodField()
 
     class Meta:
@@ -69,8 +69,7 @@ class UserMeSerializer(serializers.ModelSerializer):
             "email",
             "date_joined",
             "picture",
-            "is_commentor",
-            "is_creator",
+            "user_level",
             "notifications",
         ]
 
@@ -80,18 +79,8 @@ class UserMeSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.profile_picture.url)
         return None
 
-    def get_is_commentor(self, obj):
-        if obj.groups.filter(name__in=["commentor", "creator"]).exists():
-            return True
-        return obj.is_staff or obj.is_superuser
-
-    def get_is_creator(self, obj):
-        user = self.context["request"].user
-        if user.is_anonymous:
-            return False
-        if user.groups.filter(name="creator").exists():
-            return True
-        return user.is_staff or user.is_superuser
+    def get_user_level(self, obj):
+        return get_user_level(obj)
 
     def get_notifications(self, obj):
         unread_notifications = obj.notifications.filter(has_viewed=False)

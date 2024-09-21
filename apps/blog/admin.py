@@ -41,7 +41,8 @@ class BlockTypeAdmin(admin.ModelAdmin):
 @admin.register(Block)
 class BlockAdmin(admin.ModelAdmin):
     list_display = ("card", "block_type")
-    list_filter = ("card", "block_type")
+    list_filter = ("card__story", "block_type")
+    search_fields = ("card__title",)
     list_per_page = 100
 
 

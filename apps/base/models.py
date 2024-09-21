@@ -5,6 +5,7 @@ from django.db.models.signals import post_save
 from ckeditor.fields import RichTextField
 
 from .tasks import send_info_emails
+from apps.users.models import CustomUser
 
 
 class TopicTag(models.Model):
@@ -60,14 +61,18 @@ class SoftSkill(models.Model):
 
 
 class Mentor(models.Model):
-    name = models.CharField(max_length=100)
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="mentor", null=True, blank=True)
+    created_by = models.ForeignKey(
+        CustomUser, on_delete=models.SET_NULL, related_name="created_mentors", null=True, blank=True
+    )
+    name = models.CharField(max_length=100, blank=True)
     job = models.CharField(max_length=100, blank=True, null=True)
     color = models.CharField(max_length=50, blank=True, null=True)
     profile = models.TextField(blank=True, null=True)
     picture = models.ImageField(upload_to="mentors_pics/", null=True, blank=True)
 
     def __str__(self):
-        return self.name
+        return self.name if self.name else ""
 
 
 class EmailSending(models.Model):

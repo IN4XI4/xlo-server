@@ -67,11 +67,11 @@ class CustomUser(AbstractUser):
     reset_code = models.CharField(max_length=50, null=True, blank=True)
 
     # Settings fields:
-    show_info = models.BooleanField(default=True) # Shows detailed profile info to others
-    email_weekly_recalls = models.BooleanField(default=True) # Every week as a recall reminder
-    email_new_stories = models.BooleanField(default=True) # For liked topics
-    email_reply = models.BooleanField(default=True) # Everytime someone liked or replied your comment
-    email_info = models.BooleanField(default=True) # The admin is allowed to send emails anytime
+    show_info = models.BooleanField(default=True)  # Shows detailed profile info to others
+    email_weekly_recalls = models.BooleanField(default=True)  # Every week as a recall reminder
+    email_new_stories = models.BooleanField(default=True)  # For liked topics
+    email_reply = models.BooleanField(default=True)  # Everytime someone liked or replied your comment
+    email_info = models.BooleanField(default=True)  # The admin is allowed to send emails anytime
 
     USERNAME_FIELD = "email"
     EMAIL_FIELD = "email"
@@ -83,3 +83,10 @@ class CustomUser(AbstractUser):
 def create_auth_token(sender, instance=None, created=False, **kwargs):
     if created:
         Token.objects.create(user=instance)
+
+
+@receiver(post_save, sender=CustomUser)
+def create_mentor_for_new_user(sender, instance, created, **kwargs):
+    if created:
+        from apps.base.models import Mentor
+        Mentor.objects.create(user=instance, created_by=instance)

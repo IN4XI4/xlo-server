@@ -2,6 +2,8 @@ from rest_framework import permissions
 
 from .models import Story, Card
 
+from apps.users.utils import get_user_level
+from xloserver.constants import LEVEL_GROUPS
 
 class IsStaffOrSuperUser(permissions.BasePermission):
     """
@@ -13,6 +15,8 @@ class IsStaffOrSuperUser(permissions.BasePermission):
 
 
 class StoryPermissions(permissions.BasePermission):
+    commentor_required_value = LEVEL_GROUPS.get("commentor", 0)
+    creator_required_value = LEVEL_GROUPS.get("creator", 0)
     """
     Custom permission:
     - Require authentication for any action.
@@ -24,8 +28,9 @@ class StoryPermissions(permissions.BasePermission):
             return False
 
         if view.action == "create":
+            user_level = get_user_level(request.user)
             return (
-                request.user.groups.filter(name="creator").exists()
+                user_level >= self.creator_required_value
                 or request.user.is_staff
                 or request.user.is_superuser
             )
@@ -48,8 +53,9 @@ class CardPermissions(StoryPermissions):
             return False
 
         if view.action == "create":
+            user_level = get_user_level(request.user)
             has_create_permission = (
-                request.user.groups.filter(name="creator").exists()
+                user_level >= self.creator_required_value
                 or request.user.is_staff
                 or request.user.is_superuser
             )
@@ -73,8 +79,9 @@ class BlockPermissions(permissions.BasePermission):
             return False
 
         if view.action == "create":
+            user_level = get_user_level(request.user)
             has_create_permission = (
-                request.user.groups.filter(name="creator").exists()
+                user_level >= self.creator_required_value
                 or request.user.is_staff
                 or request.user.is_superuser
             )
@@ -107,8 +114,9 @@ class CommentPermissions(StoryPermissions):
             return False
 
         if view.action == "create":
+            user_level = get_user_level(request.user)
             return (
-                request.user.groups.filter(name__in=["commentor", "creator"]).exists()
+                user_level >= self.commentor_required_value
                 or request.user.is_staff
                 or request.user.is_superuser
             )
