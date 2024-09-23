@@ -59,9 +59,6 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [UserPermissions]
 
     def get_serializer_class(self):
-        """
-        Devuelve un serializer diferente según el tipo de acción.
-        """
         if self.action in ["update", "partial_update"]:
             return CompleteUserSerializer
         elif self.action == "retrieve":

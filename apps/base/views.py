@@ -85,7 +85,7 @@ class MentorsViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        user_level = get_user_level(user)
+        user_level, _ = get_user_level(user)
         queryset = Mentor.objects.filter(user__isnull=True)
 
         if user_level >= LEVEL_GROUPS["creator lvl 2"]:
