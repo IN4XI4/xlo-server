@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from .models import ProfileColor, Experience, Gender
 from apps.users.utils import get_user_level
-from xloserver.constants import LEVEL_GROUPS
+
 
 class ProfileColorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -57,7 +57,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserMeSerializer(serializers.ModelSerializer):
     picture = serializers.SerializerMethodField()
-    user_level = serializers.SerializerMethodField()
+    user_level_display = serializers.SerializerMethodField()
     notifications = serializers.SerializerMethodField()
 
     class Meta:
@@ -69,7 +69,7 @@ class UserMeSerializer(serializers.ModelSerializer):
             "email",
             "date_joined",
             "picture",
-            "user_level",
+            "user_level_display",
             "notifications",
         ]
 
@@ -79,8 +79,9 @@ class UserMeSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.profile_picture.url)
         return None
 
-    def get_user_level(self, obj):
-        return get_user_level(obj)
+    def get_user_level_display(self, obj):
+        numeric_level, level_name = get_user_level(obj)
+        return {"level_value": numeric_level, "level_name": level_name}
 
     def get_notifications(self, obj):
         unread_notifications = obj.notifications.filter(has_viewed=False)
@@ -94,10 +95,15 @@ class UserMeSerializer(serializers.ModelSerializer):
 
 class CompleteUserSerializer(serializers.ModelSerializer):
     country = CountryField(name_only=True)
+    user_level_display = serializers.SerializerMethodField()
 
     class Meta:
         model = get_user_model()
         fields = "__all__"
+
+    def get_user_level_display(self, obj):
+        numeric_level, level_name = get_user_level(obj)
+        return {"level_value": numeric_level, "level_name": level_name}
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
