@@ -92,7 +92,7 @@ class MentorsViewSet(viewsets.ModelViewSet):
             queryset = queryset | Mentor.objects.filter(user=user)
         if user_level >= LEVEL_GROUPS["creator lvl 3"]:
             queryset = queryset | Mentor.objects.filter(created_by=user)
-        return queryset.order_by("id")
+        return queryset.order_by("-id")
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)

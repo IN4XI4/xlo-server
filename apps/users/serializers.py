@@ -99,7 +99,7 @@ class CompleteUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = get_user_model()
-        fields = "__all__"
+        exclude = ["password"]
 
     def get_user_level_display(self, obj):
         numeric_level, level_name = get_user_level(obj)

@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils.text import slugify
 
 from apps.users.models import ProfileColor, CustomUser
 from apps.base.models import TopicTag
@@ -22,10 +23,23 @@ class Space(models.Model):
     created_time = models.DateTimeField(auto_now_add=True)
     updated_time = models.DateTimeField(auto_now=True)
     categories = models.ManyToManyField(TopicTag, related_name="spaces", blank=True)
+    slug = models.SlugField(max_length=320, blank=True, unique=True)
 
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            name_words = self.name.split()[:4]
+            short_name = " ".join(name_words)
+            self.slug = slugify(short_name)
+
+            original_slug = self.slug
+            count = 0
+            while Space.objects.filter(slug=self.slug).exists():
+                count += 1
+                self.slug = f"{original_slug}-{count}"
+        super(Space, self).save(*args, **kwargs)
 
 class MembershipRequest(models.Model):
     REQUEST_TYPE_CHOICES = [

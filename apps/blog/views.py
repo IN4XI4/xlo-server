@@ -82,6 +82,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
         "user": ("exact",),
         "user__username": ("icontains",),
         "is_active": ("exact",),
+        "spaces": ("exact",),
     }
     ordering_fields = ["created_time"]
     ordering = ["created_time"]
@@ -601,7 +602,7 @@ class UserStoryViewCreate(CreateAPIView):
         story = get_object_or_404(Story, id=story_id)
 
         UserStoryView.objects.get_or_create(user=self.request.user, story=story)
-        user_level = get_user_level(self.request.user)
+        user_level, _ = get_user_level(self.request.user)
         commentor_level = LEVEL_GROUPS.get("commentor", 0)
         if self.request.user.is_superuser or self.request.user.is_staff or user_level >= commentor_level:
             return
