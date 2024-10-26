@@ -16,8 +16,10 @@ class SpaceActiveSerializer(serializers.ModelSerializer):
 
 
 class SpaceDetailSerializer(serializers.ModelSerializer):
+    color_name = serializers.ReadOnlyField(source="color.color")
     is_owner = serializers.SerializerMethodField()
     is_member = serializers.SerializerMethodField()
+    is_admin = serializers.SerializerMethodField()
     members_count = serializers.SerializerMethodField()
     stories_count = serializers.SerializerMethodField()
 
@@ -30,12 +32,14 @@ class SpaceDetailSerializer(serializers.ModelSerializer):
             "description",
             "image",
             "color",
+            "color_name",
             "owner",
             "access_type",
             "created_time",
             "updated_time",
             "is_owner",
             "is_member",
+            "is_admin",
             "members_count",
             "stories_count",
         )
@@ -47,6 +51,10 @@ class SpaceDetailSerializer(serializers.ModelSerializer):
     def get_is_member(self, obj):
         user = self.context["request"].user
         return user == obj.owner or user in obj.admins.all() or user in obj.members.all()
+
+    def get_is_admin(self, obj):
+        user = self.context["request"].user
+        return user in obj.admins.all()
 
     def get_members_count(self, obj):
         return obj.members.count()

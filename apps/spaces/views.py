@@ -27,7 +27,7 @@ class SpaceViewSet(viewsets.ModelViewSet):
         "slug": ("exact",),
         "created_time": ("gte", "lte"),
         "updated_time": ("gte", "lte"),
-        "admins": ("exact",),  # TODO: Probar que esto sirva
+        "admins": ("exact",),
         "members": ("exact",),
     }
 
@@ -65,6 +65,17 @@ class SpaceViewSet(viewsets.ModelViewSet):
         story = self.get_object()
         serializer = self.get_serializer(story)
         return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated], url_path="my-spaces")
+    def my_spaces(self, request):
+        """
+        Retrieve the list of spaces where the user is either the owner or a member.
+        """
+        user = request.user
+        spaces = Space.objects.filter(Q(owner=user) | Q(members__in=[user])).distinct()
+        serializer = SpaceDetailSerializer(spaces, many=True, context={"request": request})
+        return Response(serializer.data)
+
 
 class MembershipRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [MembershipRequestPermissions]
