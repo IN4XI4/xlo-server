@@ -138,3 +138,12 @@ class MembershipInvitationViewSet(viewsets.ModelViewSet):
             serializer.save()
         else:
             raise ValidationError("You don't have the permissions to invite someone to this space.")
+
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated], url_path="my-invitations")
+    def my_invitations(self, request):
+        """
+        Retrieve the list of invitations where the user is being invited to a space.
+        """
+        invitations = MembershipRequest.objects.filter(user=request.user, request_type="invite", status="pending")
+        serializer = MembershipRequestSerializer(invitations, many=True)
+        return Response(serializer.data)
