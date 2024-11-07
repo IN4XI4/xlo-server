@@ -25,10 +25,15 @@ class CustomPagination(PageNumberPagination):
     page_size = 100
 
 
+class TopicTagsPagination(PageNumberPagination):
+    page_size = 20
+
+
 class TopicTagsViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = TopicTag.objects.all().order_by("id")
     serializer_class = TopicTagSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = TopicTagsPagination
     filterset_fields = {
         "name": ("exact", "icontains"),
     }

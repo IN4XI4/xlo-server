@@ -9,10 +9,11 @@ from xloserver.constants import LEVEL_GROUPS
 
 class TopicReadOnlySerializer(serializers.ModelSerializer):
     user_has_liked = serializers.SerializerMethodField()
+    story_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Topic
-        fields = ["id", "title", "image", "user_has_liked", "slug"]
+        fields = ["id", "title", "image", "user_has_liked", "slug", "story_count"]
 
     def get_user_has_liked(self, obj):
         user = self.context["request"].user
@@ -22,10 +23,14 @@ class TopicReadOnlySerializer(serializers.ModelSerializer):
         like = Like.objects.filter(user=user, content_type=content_type.id, object_id=obj.id, is_active=True).first()
         return like.id if like else False
 
+    def get_story_count(self, obj):
+        return obj.stories.filter(is_private=False).count()
+
 
 class TopicTagSerializer(serializers.ModelSerializer):
     topics = TopicReadOnlySerializer(many=True, read_only=True, source="topic_set")
     topic_content_type_id = serializers.SerializerMethodField()
+    topic_count = serializers.SerializerMethodField()
 
     class Meta:
         model = TopicTag
@@ -34,6 +39,9 @@ class TopicTagSerializer(serializers.ModelSerializer):
     def get_topic_content_type_id(self, obj):
         content_type = ContentType.objects.get_for_model(Topic)
         return content_type.id
+
+    def get_topic_count(self, obj):
+        return obj.topic_set.count()
 
 
 class TopicSerializer(serializers.ModelSerializer):
