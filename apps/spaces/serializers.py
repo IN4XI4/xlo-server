@@ -69,6 +69,18 @@ class MembershipRequestSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class MembershipRequestInvitationSerializer(serializers.ModelSerializer):
+    space_slug = serializers.ReadOnlyField(source="space.slug")
+    space_image = serializers.ImageField(source="space.image", required=False, allow_null=True, use_url=True)
+    space_color = serializers.ReadOnlyField(source="space.color.color")
+    space_name = serializers.ReadOnlyField(source="space.name")
+    space_description = serializers.ReadOnlyField(source="space.description")
+
+    class Meta:
+        model = MembershipRequest
+        fields = "__all__"
+
+
 class MembershipRequestUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = MembershipRequest

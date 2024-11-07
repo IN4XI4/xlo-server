@@ -1,6 +1,6 @@
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -13,6 +13,7 @@ from .serializers import (
     SpaceActiveSerializer,
     SpaceDetailSerializer,
     MembershipRequestSerializer,
+    MembershipRequestInvitationSerializer,
     MembershipRequestUpdateSerializer,
 )
 from apps.base.serializers import TopicTagSerializer
@@ -145,5 +146,33 @@ class MembershipInvitationViewSet(viewsets.ModelViewSet):
         Retrieve the list of invitations where the user is being invited to a space.
         """
         invitations = MembershipRequest.objects.filter(user=request.user, request_type="invite", status="pending")
-        serializer = MembershipRequestSerializer(invitations, many=True)
+        serializer = MembershipRequestInvitationSerializer(invitations, many=True, context={"request": request})
         return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated], url_path="accept")
+    def accept_invitation(self, request, pk=None):
+        try:
+            invitation = MembershipRequest.objects.get(
+                pk=pk, user=request.user, request_type="invite", status="pending"
+            )
+        except MembershipRequest.DoesNotExist:
+            return Response({"detail": "Invitation not found or already processed."}, status=status.HTTP_404_NOT_FOUND)
+        invitation.status = "approved"
+        invitation.save()
+        invitation.space.members.add(request.user)
+
+        return Response({"detail": "Invitation accepted successfully."}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated], url_path="reject")
+    def reject_invitation(self, request, pk=None):
+        try:
+            invitation = MembershipRequest.objects.get(
+                pk=pk, user=request.user, request_type="invite", status="pending"
+            )
+        except MembershipRequest.DoesNotExist:
+            return Response({"detail": "Invitation not found or already processed."}, status=status.HTTP_404_NOT_FOUND)
+
+        invitation.status = "rejected"
+        invitation.save()
+
+        return Response({"detail": "Invitation rejected successfully."}, status=status.HTTP_200_OK)

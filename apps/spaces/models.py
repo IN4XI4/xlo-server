@@ -54,6 +54,3 @@ class MembershipRequest(models.Model):
         max_length=10, choices=[("pending", "Pending"), ("approved", "Approved"), ("rejected", "Rejected")]
     )
     created_time = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ("space", "user")

@@ -124,7 +124,7 @@ class MentorSerializer(serializers.ModelSerializer):
     def get_picture(self, obj):
         request = self.context.get("request")
         if obj.user and obj.user.profile_picture:
-            return request.build_absolute_uri(obj.profile_picture.url)
+            return request.build_absolute_uri(obj.user.profile_picture.url)
         return request.build_absolute_uri(obj.picture.url) if obj.picture else None
 
 
