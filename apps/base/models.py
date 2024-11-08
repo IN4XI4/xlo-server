@@ -22,6 +22,7 @@ class TopicTag(models.Model):
 
 class Topic(models.Model):
     title = models.CharField(max_length=300)
+    description = models.CharField(max_length=400, blank=True)
     image = models.ImageField(upload_to="topics/", blank=True, null=True)
     tag = models.ForeignKey(TopicTag, on_delete=models.SET_NULL, null=True, blank=True)
     slug = models.SlugField(max_length=320, blank=True, unique=True)

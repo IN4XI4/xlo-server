@@ -36,6 +36,9 @@ class StoryDetailSerializer(serializers.ModelSerializer):
     topic_title = serializers.ReadOnlyField(source="topic.title")
     topic_slug = serializers.ReadOnlyField(source="topic.slug")
     tag_name = serializers.ReadOnlyField(source="topic.tag.name")
+    owner_name = serializers.SerializerMethodField()
+    difficulty_name = serializers.SerializerMethodField()
+    difficulty_color = serializers.SerializerMethodField()
 
     class Meta:
         model = Story
@@ -87,6 +90,18 @@ class StoryDetailSerializer(serializers.ModelSerializer):
             return next_story.slug
         return None
 
+    def get_owner_name(self, obj):
+        user = obj.user
+        if user.first_name:
+            return f"{user.first_name} {user.last_name}".strip()
+        else:
+            return user.email.split('@')[0]
+
+    def get_difficulty_color(self, obj):
+        return obj.DIFFICULTY_LEVELS[obj.difficulty_level][1]
+
+    def get_difficulty_name(self, obj):
+        return obj.get_difficulty_level_display()
 
 class CardSerializer(serializers.ModelSerializer):
     soft_skill_color = serializers.ReadOnlyField(source="soft_skill.color")

@@ -1,3 +1,4 @@
+from django import forms
 from django.db import models
 from django.contrib import admin
 from ckeditor.widgets import CKEditorWidget
@@ -11,8 +12,16 @@ class CategoryAdmin(admin.ModelAdmin):
     list_per_page = 100
 
 
+class TopicAdminForm(forms.ModelForm):
+    class Meta:
+        model = Topic
+        fields = ["title", "description", "image", "tag", "slug"]
+        widgets = {"description": forms.Textarea(attrs={"rows": 4, "cols": 80})}
+
+
 @admin.register(Topic)
 class TopicAdmin(admin.ModelAdmin):
+    form = TopicAdminForm
     search_fields = ("name",)
     list_per_page = 100
 

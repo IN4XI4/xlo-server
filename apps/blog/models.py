@@ -26,11 +26,27 @@ class Like(models.Model):
         return str(self.object_id)
 
 
+def story_image_upload_path(instance, filename):
+    return f"story_{instance.id}/{filename}"
+
+
 class Story(models.Model):
+    DIFFICULTY_LEVELS = {
+        1: ("Beginner", "#A8E6CF"),
+        2: ("Amateur", "#FFD3B6"),
+        3: ("Intermediate", "#FF8C42"),
+        4: ("Professional", "#4A90E2"),
+        5: ("Expert", "#6A0DAD"),
+    }
+
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="stories")
     topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, related_name="stories")
     title = models.CharField(max_length=300)
     subtitle = models.CharField(max_length=300, blank=True, null=True)
+    image = models.ImageField(upload_to=story_image_upload_path, blank=True, null=True)
+    difficulty_level = models.PositiveSmallIntegerField(
+        choices=[(key, value[0]) for key, value in DIFFICULTY_LEVELS.items()], default=1
+    )
     is_active = models.BooleanField(default=False)
     is_private = models.BooleanField(default=False)
     created_time = models.DateTimeField(auto_now_add=True)
