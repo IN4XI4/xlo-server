@@ -38,6 +38,7 @@ class StoryDetailSerializer(serializers.ModelSerializer):
     tag_name = serializers.ReadOnlyField(source="topic.tag.name")
     owner_name = serializers.SerializerMethodField()
     difficulty_name = serializers.SerializerMethodField()
+    language_name = serializers.SerializerMethodField()
     difficulty_color = serializers.SerializerMethodField()
 
     class Meta:
@@ -102,6 +103,9 @@ class StoryDetailSerializer(serializers.ModelSerializer):
 
     def get_difficulty_name(self, obj):
         return obj.get_difficulty_level_display()
+
+    def get_language_name(self, obj):
+        return obj.get_language_display()
 
 class CardSerializer(serializers.ModelSerializer):
     soft_skill_color = serializers.ReadOnlyField(source="soft_skill.color")
