@@ -267,12 +267,18 @@ class StoriesViewSet(viewsets.ModelViewSet):
             "title": data.get("title"),
             "subtitle": data.get("subtitle"),
             "topic": data.get("topic"),
+            "difficulty_level": data.get("difficulty_level"),
+            "language": data.get("language"),
             "is_private": data.get("is_private"),
             "free_access": data.get("free_access"),
         }
+
         story_serializer = StorySerializer(data=story_data)
         if story_serializer.is_valid():
             story = story_serializer.save(user=request.user, is_active=True)
+            if "image" in request.FILES:
+                story.image = request.FILES["image"]
+                story.save() 
         else:
             return Response(story_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         cards_keys = [key for key in request.data.keys() if key.startswith("cards[")]

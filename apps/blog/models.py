@@ -39,6 +39,16 @@ class Story(models.Model):
         5: ("Expert", "#6A0DAD"),
     }
 
+    LANGUAGE_CHOICES = [
+        ("EN", "English"),
+        ("ES", "Spanish"),
+        ("FR", "French"),
+        ("DE", "German"),
+        ("IT", "Italian"),
+        ("PT", "Portuguese"),
+        ("OT", "Other"),
+    ]
+
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="stories")
     topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, related_name="stories")
     title = models.CharField(max_length=300)
@@ -47,6 +57,7 @@ class Story(models.Model):
     difficulty_level = models.PositiveSmallIntegerField(
         choices=[(key, value[0]) for key, value in DIFFICULTY_LEVELS.items()], default=1
     )
+    language = models.CharField(max_length=2, choices=LANGUAGE_CHOICES, default="FR")
     is_active = models.BooleanField(default=False)
     is_private = models.BooleanField(default=False)
     created_time = models.DateTimeField(auto_now_add=True)
