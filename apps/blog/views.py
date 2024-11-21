@@ -366,6 +366,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
 
             if card_serializer.is_valid():
                 card = card_serializer.save()
+                existing_card_ids.append(card.id)
             else:
                 return Response(card_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             self.handle_blocks(request, card, card_index)
@@ -376,7 +377,6 @@ class StoriesViewSet(viewsets.ModelViewSet):
     def handle_blocks(self, request, card, card_index):
         blocks_keys = [key for key in request.data.keys() if key.startswith(f"cards[{card_index}].blocks[")]
         blocks_count = len(set(key.split("[")[2].split("]")[0] for key in blocks_keys))
-
         existing_block_ids = []
         for block_index in range(blocks_count):
             block_id = request.data.get(f"cards[{card_index}].blocks[{block_index}].id")
@@ -399,10 +399,11 @@ class StoriesViewSet(viewsets.ModelViewSet):
                 except Block.DoesNotExist:
                     return Response({"error": f"Block with ID {block_id} not found."}, status=status.HTTP_404_NOT_FOUND)
             else:
-                block_serializer = BlockSerializer(data=block_data)
+                block_serializer = BlockSerializer(data=block_data, context={"request": request})
 
             if block_serializer.is_valid():
-                block_serializer.save()
+                block = block_serializer.save()
+                existing_block_ids.append(block.id)
             else:
                 return Response(block_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
