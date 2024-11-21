@@ -235,6 +235,8 @@ class StoriesViewSet(viewsets.ModelViewSet):
             "slug": story.slug,
             "is_private": story.is_private,
             "free_access": story.free_access,
+            "difficulty_level": story.difficulty_level,
+            "language": story.language,
             "cards": [],
         }
         for card in cards:
@@ -330,6 +332,8 @@ class StoriesViewSet(viewsets.ModelViewSet):
             "subtitle": data.get("subtitle"),
             "is_private": data.get("is_private"),
             "free_access": data.get("free_access"),
+            "difficulty_level": data.get("difficulty_level"),
+            "language": data.get("language"),
         }
         story_serializer = StorySerializer(story, data=story_data, partial=True)
         if story_serializer.is_valid():
