@@ -4,7 +4,6 @@ from rest_framework import serializers
 from .models import (
     Story,
     Card,
-    BlockType,
     Block,
     Comment,
     Like,
@@ -167,20 +166,17 @@ class CardSerializer(serializers.ModelSerializer):
         read_only_fields = ["created_time", "updated_time"]
 
 
-class BlockTypeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BlockType
-        fields = "__all__"
-
-
 class BlockSerializer(serializers.ModelSerializer):
-    block_type_name = serializers.ReadOnlyField(source="block_type.name")
+    block_type_name = serializers.SerializerMethodField()
     user_has_liked = serializers.SerializerMethodField()
     user_has_recalled = serializers.SerializerMethodField()
 
     class Meta:
         model = Block
         fields = "__all__"
+
+    def get_block_type_name(self, obj):
+        return obj.get_block_class_display()
 
     def get_user_has_liked(self, obj):
         user = self.context["request"].user
@@ -202,7 +198,7 @@ class BlockSerializer(serializers.ModelSerializer):
 
 
 class BlockDetailSerializer(serializers.ModelSerializer):
-    block_type_name = serializers.ReadOnlyField(source="block_type.name")
+    block_type_name = serializers.SerializerMethodField()
     story_title = serializers.ReadOnlyField(source="card.story.title")
     card_title = serializers.ReadOnlyField(source="card.title")
     soft_skill_description = serializers.ReadOnlyField(source="card.soft_skill.description")
@@ -227,6 +223,9 @@ class BlockDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Block
         fields = "__all__"
+
+    def get_block_type_name(self, obj):
+        return obj.get_block_class_display()
 
     def get_user_has_liked(self, obj):
         user = self.context["request"].user

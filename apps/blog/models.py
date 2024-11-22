@@ -109,26 +109,35 @@ class Card(models.Model):
         return self.title
 
 
-class BlockType(models.Model):
-    name = models.CharField(max_length=150)
-
-    def __str__(self):
-        return self.name
-
-
 def block_image_upload_path(instance, filename):
     return f"story_{instance.card.story.id}/card_{instance.card.id}/{filename}"
 
 
 class Block(models.Model):
+
+    BLOCK_TYPES = [
+        (1, "STANDARD"),
+        (2, "MONSTER"),
+        (3, "MENTOR"),
+        (4, "HERO"),
+        (5, "HIGHLIGHT"),
+        (6, "QUOTE"),
+        (7, "FLASHCARD"),
+        (8, "FACT"),
+        (9, "WONDER"),
+        (10, "QUESTION"),
+        (11, "TESTIMONIAL"),
+        (12, "REFLECTION"),
+    ]
+
     card = models.ForeignKey(Card, on_delete=models.CASCADE)
-    block_type = models.ForeignKey(BlockType, on_delete=models.SET_NULL, blank=True, null=True)
+    block_class = models.PositiveSmallIntegerField(choices=BLOCK_TYPES, default=1) 
     content = models.TextField()
     image = models.ImageField(upload_to=block_image_upload_path, blank=True, null=True)
     order = models.IntegerField(default=0, blank=True)
 
     def __str__(self):
-        return f"{self.card.title} - {self.block_type.name if self.block_type else 'No BlockType'}"
+        return f"{self.card.title} - {self.get_block_class_display()}"
 
 
 class Comment(models.Model):

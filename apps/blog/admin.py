@@ -3,7 +3,6 @@ from django.contrib import admin
 from .models import (
     Story,
     Card,
-    BlockType,
     Block,
     Comment,
     Like,
@@ -32,16 +31,10 @@ class CardAdmin(admin.ModelAdmin):
     list_per_page = 50
 
 
-@admin.register(BlockType)
-class BlockTypeAdmin(admin.ModelAdmin):
-    search_fields = ("name",)
-    list_per_page = 100
-
-
 @admin.register(Block)
 class BlockAdmin(admin.ModelAdmin):
-    list_display = ("card", "block_type")
-    list_filter = ("card__story", "block_type")
+    list_display = ("card", "block_class")
+    list_filter = ("card__story", "block_class")
     search_fields = ("card__title",)
     list_per_page = 100
 
