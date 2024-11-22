@@ -19,7 +19,6 @@ from rest_framework.filters import OrderingFilter
 from .models import (
     Story,
     Card,
-    BlockType,
     Block,
     Comment,
     Like,
@@ -45,7 +44,6 @@ from .serializers import (
     CardSerializer,
     CommentSerializer,
     LikeSerializer,
-    BlockTypeSerializer,
     BlockSerializer,
     BlockDetailSerializer,
     UserStoryViewSerializer,
@@ -245,7 +243,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
                 {
                     "id": block.id,
                     "content": block.content,
-                    "blockType": block.block_type.id,
+                    "blockType": block.block_class,
                     "image": request.build_absolute_uri(block.image.url) if block.image else None,
                 }
                 for block in blocks
@@ -305,7 +303,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
                 block_data = {
                     "card": card.id,
                     "content": request.data.get(f"cards[{card_index}].blocks[{block_index}].content"),
-                    "block_type": request.data.get(f"cards[{card_index}].blocks[{block_index}].blockType"),
+                    "block_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].blockType"),
                 }
                 if f"cards[{card_index}].blocks[{block_index}].image" in request.FILES:
                     block_data["image"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image"]
@@ -383,7 +381,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
             block_data = {
                 "card": card.id,
                 "content": request.data.get(f"cards[{card_index}].blocks[{block_index}].content"),
-                "block_type": request.data.get(f"cards[{card_index}].blocks[{block_index}].blockType"),
+                "block_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].blockType"),
             }
             if block_id:
                 try:
@@ -465,15 +463,6 @@ class CardsViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class BlockTypesViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = BlockType.objects.all()
-    serializer_class = BlockTypeSerializer
-    filterset_fields = {
-        "name": ("exact", "icontains"),
-    }
-    pagination_class = BlocksPagination
-
-
 class BlocksViewSet(viewsets.ModelViewSet):
     serializer_class = BlockSerializer
     permission_classes = [BlockPermissions]
@@ -481,7 +470,7 @@ class BlocksViewSet(viewsets.ModelViewSet):
     filterset_fields = {
         "card": ("exact", "in"),
         "card__story": ("exact", "in"),
-        "block_type": ("exact", "in"),
+        "block_class": ("exact", "in"),
     }
     ordering_fields = [
         "order",
