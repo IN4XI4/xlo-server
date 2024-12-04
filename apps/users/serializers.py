@@ -59,6 +59,7 @@ class UserMeSerializer(serializers.ModelSerializer):
     picture = serializers.SerializerMethodField()
     user_level = serializers.SerializerMethodField()
     notifications = serializers.SerializerMethodField()
+    profile_color = serializers.ReadOnlyField(source="profile_color.color")
 
     class Meta:
         model = get_user_model()
@@ -70,6 +71,7 @@ class UserMeSerializer(serializers.ModelSerializer):
             "date_joined",
             "picture",
             "user_level",
+            "profile_color",
             "notifications",
         ]
 

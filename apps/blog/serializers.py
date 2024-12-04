@@ -23,6 +23,12 @@ class StorySerializer(serializers.ModelSerializer):
 
 
 class StoryDetailSerializer(serializers.ModelSerializer):
+    topic_title = serializers.ReadOnlyField(source="topic.title")
+    topic_slug = serializers.ReadOnlyField(source="topic.slug")
+    tag_name = serializers.ReadOnlyField(source="topic.tag.name")
+    user_color = serializers.ReadOnlyField(source="user.profile_color.color")
+    user_picture = serializers.ImageField(source="user.profile_picture", required=False, allow_null=True, use_url=True)
+    is_owner = serializers.SerializerMethodField()
     cards_count = serializers.SerializerMethodField()
     comments_count = serializers.SerializerMethodField()
     likes_count = serializers.SerializerMethodField()
@@ -31,10 +37,6 @@ class StoryDetailSerializer(serializers.ModelSerializer):
     user_has_viewed = serializers.SerializerMethodField()
     previous_story_slug = serializers.SerializerMethodField()
     next_story_slug = serializers.SerializerMethodField()
-    is_owner = serializers.SerializerMethodField()
-    topic_title = serializers.ReadOnlyField(source="topic.title")
-    topic_slug = serializers.ReadOnlyField(source="topic.slug")
-    tag_name = serializers.ReadOnlyField(source="topic.tag.name")
     owner_name = serializers.SerializerMethodField()
     difficulty_name = serializers.SerializerMethodField()
     language_name = serializers.SerializerMethodField()
@@ -95,16 +97,17 @@ class StoryDetailSerializer(serializers.ModelSerializer):
         if user.first_name:
             return f"{user.first_name} {user.last_name}".strip()
         else:
-            return user.email.split('@')[0]
+            return user.email.split("@")[0]
 
     def get_difficulty_color(self, obj):
-        return obj.DIFFICULTY_LEVELS[obj.difficulty_level][1]
+        return obj.DIFFICULTY_LEVELS[obj.difficulty_level][1] if obj.difficulty_level is not None else None
 
     def get_difficulty_name(self, obj):
         return obj.get_difficulty_level_display()
 
     def get_language_name(self, obj):
         return obj.get_language_display()
+
 
 class CardSerializer(serializers.ModelSerializer):
     soft_skill_color = serializers.ReadOnlyField(source="soft_skill.color")
@@ -122,6 +125,10 @@ class CardSerializer(serializers.ModelSerializer):
     mentor_profile = serializers.SerializerMethodField()
     mentor_picture = serializers.SerializerMethodField()
     user_has_recalled = serializers.SerializerMethodField()
+    owner_picture = serializers.FileField(
+        source="story.user.profile_picture", required=False, allow_null=True, use_url=True
+    )
+    owner_color = serializers.ReadOnlyField(source="story.user.profile_color.color")
 
     def get_user_has_recalled(self, obj):
         user = self.context["request"].user
@@ -219,6 +226,9 @@ class BlockDetailSerializer(serializers.ModelSerializer):
     mentor_picture = serializers.ImageField(source="card.mentor.picture", required=False, allow_null=True, use_url=True)
     user_has_liked = serializers.SerializerMethodField()
     user_has_recalled = serializers.SerializerMethodField()
+    owner_picture = serializers.ImageField(
+        source="card.story.user.profile_picture", required=False, allow_null=True, use_url=True
+    )
 
     class Meta:
         model = Block

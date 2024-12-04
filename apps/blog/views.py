@@ -61,6 +61,10 @@ from apps.users.utils import get_user_level
 from xloserver.constants import LEVEL_GROUPS
 
 
+def clean_data(data):
+    return {field: value for field, value in data.items() if value != ""}
+
+
 class BlocksPagination(PageNumberPagination):
     page_size = 20
 
@@ -234,8 +238,11 @@ class StoriesViewSet(viewsets.ModelViewSet):
             "is_private": story.is_private,
             "free_access": story.free_access,
             "difficulty_level": story.difficulty_level,
+            "life_moments": story.life_moment,
+            "story_identities": story.identity_type,
             "language": story.language,
             "cards": [],
+            "image": request.build_absolute_uri(story.image.url) if story.image else None,
         }
         for card in cards:
             blocks = Block.objects.filter(card=card).order_by("id")
@@ -263,12 +270,15 @@ class StoriesViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"], url_path="create-story-full")
     def create_story_full(self, request, *args, **kwargs):
         data = request.data
+        data = clean_data(data)
         story_data = {
             "title": data.get("title"),
             "subtitle": data.get("subtitle"),
             "topic": data.get("topic"),
             "difficulty_level": data.get("difficulty_level"),
             "language": data.get("language"),
+            "life_moment": data.get("life_moments"),
+            "identity_type": data.get("story_identities"),
             "is_private": data.get("is_private"),
             "free_access": data.get("free_access"),
         }
@@ -278,7 +288,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
             story = story_serializer.save(user=request.user, is_active=True)
             if "image" in request.FILES:
                 story.image = request.FILES["image"]
-                story.save() 
+                story.save()
         else:
             return Response(story_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         cards_keys = [key for key in request.data.keys() if key.startswith("cards[")]
@@ -307,6 +317,8 @@ class StoriesViewSet(viewsets.ModelViewSet):
                 }
                 if f"cards[{card_index}].blocks[{block_index}].image" in request.FILES:
                     block_data["image"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image"]
+                if f"cards[{card_index}].blocks[{block_index}].image_2" in request.FILES:
+                    block_data["image_2"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image_2"]
                 block_serializer = BlockSerializer(data=block_data)
                 if block_serializer.is_valid():
                     block_serializer.save()
@@ -330,9 +342,16 @@ class StoriesViewSet(viewsets.ModelViewSet):
             "subtitle": data.get("subtitle"),
             "is_private": data.get("is_private"),
             "free_access": data.get("free_access"),
+            "life_moment": data.get("life_moments"),
+            "identity_type": data.get("story_identities"),
             "difficulty_level": data.get("difficulty_level"),
             "language": data.get("language"),
         }
+        if story.image and not request.FILES.get("image"):
+            if not request.data.get("image"):
+                story.image = None
+        elif "image" in request.FILES:
+            story_data["image"] = request.FILES["image"]
         story_serializer = StorySerializer(story, data=story_data, partial=True)
         if story_serializer.is_valid():
             story.edited_time = timezone.now()
@@ -392,6 +411,11 @@ class StoriesViewSet(viewsets.ModelViewSet):
                             block.image = None
                     elif f"cards[{card_index}].blocks[{block_index}].image" in request.FILES:
                         block_data["image"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image"]
+                    if block.image_2 and not request.FILES.get(f"cards[{card_index}].blocks[{block_index}].image_2"):
+                        if not request.data.get(f"cards[{card_index}].blocks[{block_index}].image_2"):
+                            block.image_2 = None
+                    elif f"cards[{card_index}].blocks[{block_index}].image_2" in request.FILES:
+                        block_data["image"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image_2"]
 
                     existing_block_ids.append(block_id)
                 except Block.DoesNotExist:
