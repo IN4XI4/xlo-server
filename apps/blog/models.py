@@ -3,7 +3,7 @@ from django.utils.text import slugify
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 
-from apps.users.models import CustomUser
+from apps.users.models import CustomUser, ProfileColor
 from apps.base.models import Topic, SoftSkill, Mentor
 
 
@@ -40,6 +40,7 @@ class Story(models.Model):
     }
 
     LANGUAGE_CHOICES = [
+        (None, "Unspecified Language"),
         ("EN", "English"),
         ("ES", "Spanish"),
         ("FR", "French"),
@@ -49,15 +50,34 @@ class Story(models.Model):
         ("OT", "Other"),
     ]
 
+    AGE_MOMENTS = [
+        (None, "Unspecified Age"),
+        (1, "Aged 5 to 10"),
+        (2, "Aged 10 to 15"),
+        (3, "Aged 15 to 20"),
+        (4, "Aged 20 to 30"),
+        (5, "Aged 40 to 50"),
+        (6, "Aged 50 to 60"),
+        (7, "Aged 60 to 70"),
+        (8, "Aged 70 and more"),
+    ]
+
+    IDENTITY_CHOICES = [
+        (None, "Unspecified Identity"),
+        (1, "Instinctive Identity"),
+        (2, "Emotional Identity"),
+        (3, "Mental Identity"),
+    ]
+
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="stories")
     topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, related_name="stories")
     title = models.CharField(max_length=300)
     subtitle = models.CharField(max_length=300, blank=True, null=True)
     image = models.ImageField(upload_to=story_image_upload_path, blank=True, null=True)
     difficulty_level = models.PositiveSmallIntegerField(
-        choices=[(key, value[0]) for key, value in DIFFICULTY_LEVELS.items()], default=1
+        choices=[(key, value[0]) for key, value in DIFFICULTY_LEVELS.items()], null=True, blank=True
     )
-    language = models.CharField(max_length=2, choices=LANGUAGE_CHOICES, default="FR")
+    language = models.CharField(max_length=2, choices=LANGUAGE_CHOICES, blank=True, null=True)
     is_active = models.BooleanField(default=False)
     is_private = models.BooleanField(default=False)
     created_time = models.DateTimeField(auto_now_add=True)
@@ -66,6 +86,8 @@ class Story(models.Model):
     views_count = models.IntegerField(default=0)
     slug = models.SlugField(max_length=320, blank=True, unique=True)
     free_access = models.BooleanField(default=False)
+    life_moment = models.PositiveSmallIntegerField(choices=AGE_MOMENTS, null=True, blank=True)
+    identity_type = models.PositiveSmallIntegerField(choices=IDENTITY_CHOICES, null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.edited_time:
@@ -115,6 +137,12 @@ def block_image_upload_path(instance, filename):
 
 class Block(models.Model):
 
+    CONTENT_CHOICES = [
+        ("FACT", "Fact"),
+        ("MYTH", "Myth"),
+        ("OPINION", "Opinion"),
+    ]
+
     BLOCK_TYPES = [
         (1, "STANDARD"),
         (2, "MONSTER"),
@@ -131,9 +159,15 @@ class Block(models.Model):
     ]
 
     card = models.ForeignKey(Card, on_delete=models.CASCADE)
-    block_class = models.PositiveSmallIntegerField(choices=BLOCK_TYPES, default=1) 
+    block_class = models.PositiveSmallIntegerField(choices=BLOCK_TYPES, default=1)
+    content_class = models.CharField(choices=CONTENT_CHOICES, blank=True, null=True)
+    title = models.CharField(max_length=50, blank=True)
     content = models.TextField()
+    content_2 = models.TextField(blank=True, null=True)
     image = models.ImageField(upload_to=block_image_upload_path, blank=True, null=True)
+    image_2 = models.ImageField(upload_to=block_image_upload_path, blank=True, null=True)
+    quoted_by = models.CharField(max_length=70, blank=True, null=True)
+    block_color = models.ForeignKey(ProfileColor, null=True, blank=True, on_delete=models.SET_NULL)
     order = models.IntegerField(default=0, blank=True)
 
     def __str__(self):

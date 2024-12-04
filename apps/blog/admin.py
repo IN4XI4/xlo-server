@@ -33,7 +33,7 @@ class CardAdmin(admin.ModelAdmin):
 
 @admin.register(Block)
 class BlockAdmin(admin.ModelAdmin):
-    list_display = ("card", "block_class")
+    list_display = ("id", "card", "block_class")
     list_filter = ("card__story", "block_class")
     search_fields = ("card__title",)
     list_per_page = 100
