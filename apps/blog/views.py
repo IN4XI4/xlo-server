@@ -337,6 +337,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
             return Response({"error": "Story not found."}, status=status.HTTP_404_NOT_FOUND)
 
         data = request.data
+        data = clean_data(data)
         story_data = {
             "title": data.get("title"),
             "subtitle": data.get("subtitle"),
