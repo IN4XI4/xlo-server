@@ -174,6 +174,7 @@ class CardSerializer(serializers.ModelSerializer):
 
 
 class BlockSerializer(serializers.ModelSerializer):
+    block_color_string = serializers.ReadOnlyField(source="block_color.color")
     block_type_name = serializers.SerializerMethodField()
     user_has_liked = serializers.SerializerMethodField()
     user_has_recalled = serializers.SerializerMethodField()
@@ -206,6 +207,7 @@ class BlockSerializer(serializers.ModelSerializer):
 
 class BlockDetailSerializer(serializers.ModelSerializer):
     block_type_name = serializers.SerializerMethodField()
+    block_color_string = serializers.ReadOnlyField(source="block_color.color")
     story_title = serializers.ReadOnlyField(source="card.story.title")
     card_title = serializers.ReadOnlyField(source="card.title")
     soft_skill_description = serializers.ReadOnlyField(source="card.soft_skill.description")
