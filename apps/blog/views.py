@@ -251,7 +251,11 @@ class StoriesViewSet(viewsets.ModelViewSet):
                     "id": block.id,
                     "content": block.content,
                     "blockType": block.block_class,
+                    "quoted_by": block.quoted_by,
+                    "block_color": block.block_color_id,
+                    "block_color_string": block.block_color.color if block.block_color else None,
                     "image": request.build_absolute_uri(block.image.url) if block.image else None,
+                    "image_2": request.build_absolute_uri(block.image_2.url) if block.image_2 else None,
                 }
                 for block in blocks
             ]
@@ -314,6 +318,8 @@ class StoriesViewSet(viewsets.ModelViewSet):
                     "card": card.id,
                     "content": request.data.get(f"cards[{card_index}].blocks[{block_index}].content"),
                     "block_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].blockType"),
+                    "quoted_by": request.data.get(f"cards[{card_index}].blocks[{block_index}].quoted_by"),
+                    "block_color": request.data.get(f"cards[{card_index}].blocks[{block_index}].block_color"),
                 }
                 if f"cards[{card_index}].blocks[{block_index}].image" in request.FILES:
                     block_data["image"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image"]
@@ -402,6 +408,8 @@ class StoriesViewSet(viewsets.ModelViewSet):
                 "card": card.id,
                 "content": request.data.get(f"cards[{card_index}].blocks[{block_index}].content"),
                 "block_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].blockType"),
+                "quoted_by": request.data.get(f"cards[{card_index}].blocks[{block_index}].quoted_by"),
+                "block_color": request.data.get(f"cards[{card_index}].blocks[{block_index}].block_color"),
             }
             if block_id:
                 try:
@@ -416,7 +424,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
                         if not request.data.get(f"cards[{card_index}].blocks[{block_index}].image_2"):
                             block.image_2 = None
                     elif f"cards[{card_index}].blocks[{block_index}].image_2" in request.FILES:
-                        block_data["image"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image_2"]
+                        block_data["image_2"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image_2"]
 
                     existing_block_ids.append(block_id)
                 except Block.DoesNotExist:
