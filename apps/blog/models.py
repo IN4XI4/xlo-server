@@ -161,7 +161,7 @@ class Block(models.Model):
     card = models.ForeignKey(Card, on_delete=models.CASCADE)
     block_class = models.PositiveSmallIntegerField(choices=BLOCK_TYPES, default=1)
     content_class = models.CharField(choices=CONTENT_CHOICES, blank=True, null=True)
-    title = models.CharField(max_length=50, blank=True)
+    title = models.CharField(max_length=50, blank=True, null=True)
     content = models.TextField()
     content_2 = models.TextField(blank=True, null=True)
     image = models.ImageField(upload_to=block_image_upload_path, blank=True, null=True)

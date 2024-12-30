@@ -252,8 +252,10 @@ class StoriesViewSet(viewsets.ModelViewSet):
                     "content": block.content,
                     "blockType": block.block_class,
                     "quoted_by": block.quoted_by,
+                    "title": block.title,
                     "block_color": block.block_color_id,
                     "block_color_string": block.block_color.color if block.block_color else None,
+                    "content_class": block.content_class,
                     "image": request.build_absolute_uri(block.image.url) if block.image else None,
                     "image_2": request.build_absolute_uri(block.image_2.url) if block.image_2 else None,
                 }
@@ -286,7 +288,6 @@ class StoriesViewSet(viewsets.ModelViewSet):
             "is_private": data.get("is_private"),
             "free_access": data.get("free_access"),
         }
-
         story_serializer = StorySerializer(data=story_data)
         if story_serializer.is_valid():
             story = story_serializer.save(user=request.user, is_active=True)
@@ -312,7 +313,6 @@ class StoriesViewSet(viewsets.ModelViewSet):
 
             blocks_keys = [key for key in request.data.keys() if key.startswith(f"cards[{card_index}].blocks[")]
             blocks_count = len(set(key.split("[")[2].split("]")[0] for key in blocks_keys))
-
             for block_index in range(blocks_count):
                 block_data = {
                     "card": card.id,
@@ -320,6 +320,8 @@ class StoriesViewSet(viewsets.ModelViewSet):
                     "block_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].blockType"),
                     "quoted_by": request.data.get(f"cards[{card_index}].blocks[{block_index}].quoted_by"),
                     "block_color": request.data.get(f"cards[{card_index}].blocks[{block_index}].block_color"),
+                    "content_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].content_class"),
+                    "title": request.data.get(f"cards[{card_index}].blocks[{block_index}].title"),
                 }
                 if f"cards[{card_index}].blocks[{block_index}].image" in request.FILES:
                     block_data["image"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image"]
@@ -410,6 +412,8 @@ class StoriesViewSet(viewsets.ModelViewSet):
                 "block_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].blockType"),
                 "quoted_by": request.data.get(f"cards[{card_index}].blocks[{block_index}].quoted_by"),
                 "block_color": request.data.get(f"cards[{card_index}].blocks[{block_index}].block_color"),
+                "content_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].content_class"),
+                "title": request.data.get(f"cards[{card_index}].blocks[{block_index}].title"),
             }
             if block_id:
                 try:
