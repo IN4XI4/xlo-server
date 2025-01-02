@@ -250,6 +250,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
                 {
                     "id": block.id,
                     "content": block.content,
+                    "content_2": block.content_2,
                     "blockType": block.block_class,
                     "quoted_by": block.quoted_by,
                     "title": block.title,
@@ -317,6 +318,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
                 block_data = {
                     "card": card.id,
                     "content": request.data.get(f"cards[{card_index}].blocks[{block_index}].content"),
+                    "content_2": request.data.get(f"cards[{card_index}].blocks[{block_index}].content_2"),
                     "block_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].blockType"),
                     "quoted_by": request.data.get(f"cards[{card_index}].blocks[{block_index}].quoted_by"),
                     "block_color": request.data.get(f"cards[{card_index}].blocks[{block_index}].block_color"),
@@ -409,6 +411,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
             block_data = {
                 "card": card.id,
                 "content": request.data.get(f"cards[{card_index}].blocks[{block_index}].content"),
+                "content_2": request.data.get(f"cards[{card_index}].blocks[{block_index}].content_2"),
                 "block_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].blockType"),
                 "quoted_by": request.data.get(f"cards[{card_index}].blocks[{block_index}].quoted_by"),
                 "block_color": request.data.get(f"cards[{card_index}].blocks[{block_index}].block_color"),
