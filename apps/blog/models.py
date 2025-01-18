@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import JSONField
 from django.utils.text import slugify
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
@@ -169,6 +170,7 @@ class Block(models.Model):
     quoted_by = models.CharField(max_length=70, blank=True, null=True)
     block_color = models.ForeignKey(ProfileColor, null=True, blank=True, on_delete=models.SET_NULL)
     order = models.IntegerField(default=0, blank=True)
+    options = JSONField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.card.title} - {self.get_block_class_display()}"

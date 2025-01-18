@@ -1,4 +1,6 @@
+import json
 import random
+
 
 from django.db import transaction
 from django.db.models import F, OuterRef, Subquery, Q
@@ -259,6 +261,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
                     "content_class": block.content_class,
                     "image": request.build_absolute_uri(block.image.url) if block.image else None,
                     "image_2": request.build_absolute_uri(block.image_2.url) if block.image_2 else None,
+                    "options": block.options,
                 }
                 for block in blocks
             ]
@@ -324,6 +327,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
                     "block_color": request.data.get(f"cards[{card_index}].blocks[{block_index}].block_color"),
                     "content_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].content_class"),
                     "title": request.data.get(f"cards[{card_index}].blocks[{block_index}].title"),
+                    "options": json.loads(request.data.get(f"cards[{card_index}].blocks[{block_index}].options")),
                 }
                 if f"cards[{card_index}].blocks[{block_index}].image" in request.FILES:
                     block_data["image"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image"]
@@ -417,6 +421,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
                 "block_color": request.data.get(f"cards[{card_index}].blocks[{block_index}].block_color"),
                 "content_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].content_class"),
                 "title": request.data.get(f"cards[{card_index}].blocks[{block_index}].title"),
+                "options": json.loads(request.data.get(f"cards[{card_index}].blocks[{block_index}].options")),
             }
             if block_id:
                 try:
