@@ -67,6 +67,16 @@ def clean_data(data):
     return {field: value for field, value in data.items() if value != ""}
 
 
+def safe_json_loads(value, default=None):
+    """
+    Intenta cargar un JSON válido desde un valor dado. 
+    Si falla, devuelve un valor predeterminado.
+    """
+    try:
+        return json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return default
+
 class BlocksPagination(PageNumberPagination):
     page_size = 20
 
@@ -327,7 +337,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
                     "block_color": request.data.get(f"cards[{card_index}].blocks[{block_index}].block_color"),
                     "content_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].content_class"),
                     "title": request.data.get(f"cards[{card_index}].blocks[{block_index}].title"),
-                    "options": json.loads(request.data.get(f"cards[{card_index}].blocks[{block_index}].options")),
+                    "options": safe_json_loads(request.data.get(f"cards[{card_index}].blocks[{block_index}].options")),
                 }
                 if f"cards[{card_index}].blocks[{block_index}].image" in request.FILES:
                     block_data["image"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image"]
@@ -421,7 +431,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
                 "block_color": request.data.get(f"cards[{card_index}].blocks[{block_index}].block_color"),
                 "content_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].content_class"),
                 "title": request.data.get(f"cards[{card_index}].blocks[{block_index}].title"),
-                "options": json.loads(request.data.get(f"cards[{card_index}].blocks[{block_index}].options")),
+                "options": safe_json_loads(request.data.get(f"cards[{card_index}].blocks[{block_index}].options")),
             }
             if block_id:
                 try:
