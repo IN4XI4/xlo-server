@@ -204,6 +204,21 @@ class BlockSerializer(serializers.ModelSerializer):
         else:
             return {"recall": False, "level": None, "recall_id": None}
 
+    def validate(self, data):
+        if data.get("block_class") == 10:  # Type "QUESTION"
+            options = data.get("options", [])
+            correct_answers = options.get("correct_answer", [])
+            incorrect_answers = options.get("incorrect_answers", [])
+
+            if not correct_answers:
+                raise serializers.ValidationError("A question block must have at least one correct answer.")
+            if not incorrect_answers:
+                raise serializers.ValidationError("A question block must have at least one incorrect answer.")
+
+            if not isinstance(correct_answers, list) or not isinstance(incorrect_answers, list):
+                raise serializers.ValidationError("Correct and incorrect answers must be lists.")
+        return data
+
 
 class BlockDetailSerializer(serializers.ModelSerializer):
     block_type_name = serializers.SerializerMethodField()
