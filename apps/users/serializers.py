@@ -2,9 +2,10 @@ from django.contrib.auth import get_user_model
 from django_countries.serializer_fields import CountryField
 from rest_framework import serializers
 
-from .models import ProfileColor, Experience, Gender
+from .models import ProfileColor, Experience, Gender, UserBadge, BadgeLevels
 from apps.users.utils import get_user_level
 from xloserver.constants import LEVEL_GROUPS
+
 
 class ProfileColorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -143,3 +144,13 @@ class UserDetailSerializer(serializers.ModelSerializer):
 class PasswordResetSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         fields = ("password", "password2", "reset_code")
+
+
+class UserBadgeSerializer(serializers.ModelSerializer):
+    level_colors = serializers.SerializerMethodField()
+    class Meta:
+        model = UserBadge
+        fields = "__all__"
+
+    def get_level_colors(self, obj):
+        return BadgeLevels.get_colors(obj.level)

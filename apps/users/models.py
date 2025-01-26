@@ -89,4 +89,47 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
 def create_mentor_for_new_user(sender, instance, created, **kwargs):
     if created:
         from apps.base.models import Mentor
+
         Mentor.objects.create(user=instance, created_by=instance)
+
+
+class BadgeTypes(models.TextChoices):
+    VETERAN = "VETERAN", "Veteran"
+    STORYTELLER = "STORYTELLER", "Storyteller"
+    POPULAR = "POPULAR", "Popular"
+    COLLABORATOR = "COLLABORATOR", "Collaborator"
+    EXPLORER = "EXPLORER", "Explorer"
+
+
+_LEVEL_COLORS = {
+    "Bronze": ("#A97142", "#F0DEA4"),
+    "Silver": ("#A7A7A7", "#DCDCDC"),
+    "Gold": ("#BC9313", "#E4D4A1"),
+    "Obsidian": ("#3E2856", "#B2A9BB"),
+    "Mixelo": ("#3DB1FF", "#B8E3FF"),
+}
+
+
+class BadgeLevels(models.TextChoices):
+    BRONZE = "Bronze", "Bronze"
+    SILVER = "Silver", "Silver"
+    GOLD = "Gold", "Gold"
+    OBSIDIAN = "Obsidian", "Obsidian"
+    MIXELO = "Mixelo", "Mixelo"
+
+    @classmethod
+    def get_colors(cls, level):
+        return _LEVEL_COLORS.get(level, ("#FFFFFF", "#000000"))
+
+
+class UserBadge(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="badges")
+    badge_type = models.CharField(max_length=20, choices=BadgeTypes.choices)
+    level = models.CharField(max_length=20, choices=BadgeLevels.choices)
+    awarded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "badge_type", "level")
+
+    def __str__(self):
+        return f"{self.user.username} - {self.get_badge_type_display()} ({self.level})"
