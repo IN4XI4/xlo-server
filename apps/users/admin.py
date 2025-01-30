@@ -23,3 +23,14 @@ class UserBadgeAdmin(admin.ModelAdmin):
     list_filter = ("badge_type", "level")
     search_fields = ("user__username",)
     list_per_page = 100
+
+    readonly_fields = ("id", "user", "badge_type", "level")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

@@ -14,6 +14,8 @@ from .models import (
     Notification,
 )
 
+from apps.users.models import UserBadge, BadgeLevels
+from apps.users.serializers import UserBadgeSerializer
 
 class StorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -280,6 +282,7 @@ class CommentSerializer(serializers.ModelSerializer):
     formatted_created_time = serializers.SerializerMethodField()
     user_has_liked = serializers.SerializerMethodField()
     user_has_recalled = serializers.SerializerMethodField()
+    commentor_last_badge = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
@@ -309,6 +312,16 @@ class CommentSerializer(serializers.ModelSerializer):
             return {"recall": True, "level": recall.importance_level, "recall_id": recall.id}
         else:
             return {"recall": False, "level": None, "recall_id": None}
+
+    def get_commentor_last_badge(self, obj):
+        user = obj.user
+        last_badge = UserBadge.objects.filter(user=user).order_by("-awarded_at").first()
+        if last_badge:
+            badge_data = UserBadgeSerializer(last_badge).data
+            badge_data["level_colors"] = BadgeLevels.get_colors(last_badge.level)
+            return badge_data
+
+        return None
 
 
 class LikeSerializer(serializers.ModelSerializer):
