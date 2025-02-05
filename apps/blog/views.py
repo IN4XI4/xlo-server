@@ -118,7 +118,14 @@ class StoriesViewSet(viewsets.ModelViewSet):
         - QuerySet: A queryset of Story objects.
         """
         user = self.request.user
-        return Story.objects.filter(is_active=True).filter(Q(is_private=False) | Q(user=user))
+        queryset = Story.objects.filter(is_active=True)
+        
+        if user.is_authenticated:
+            queryset = queryset.filter(Q(is_private=False) | Q(user=user))
+        else:
+            queryset = queryset.filter(is_private=False, free_access=True)
+        
+        return queryset
 
     def get_permissions(self):
         """
@@ -126,7 +133,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
         """
         if self.action == "approve_story":
             permission_classes = [IsStaffOrSuperUser()]
-        elif self.action == "find_by_slug":
+        elif self.action in ["find_by_slug", "list"]:
             return [AllowAny()]
         else:
             permission_classes = [permission() for permission in self.permission_classes]
