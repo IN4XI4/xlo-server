@@ -78,7 +78,7 @@ def safe_json_loads(value, default=None):
         return default
 
 class BlocksPagination(PageNumberPagination):
-    page_size = 20
+    page_size = 50
 
 
 class NotificationsPagination(PageNumberPagination):
