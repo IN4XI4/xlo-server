@@ -1,7 +1,10 @@
 from django.contrib.auth import get_user_model
+from django.contrib.contenttypes.models import ContentType
 from django_countries.serializer_fields import CountryField
+from django.utils.timezone import now
 from rest_framework import serializers
 
+from apps.blog.models import Like, Story, Comment, UserStoryView
 from .models import ProfileColor, Experience, Gender, UserBadge, BadgeLevels
 from apps.users.utils import get_user_level
 from xloserver.constants import LEVEL_GROUPS
@@ -103,6 +106,89 @@ class CompleteUserSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class UserBadgeInfoSerializer(serializers.ModelSerializer):
+    next_badge_levels = serializers.SerializerMethodField()
+
+    class Meta:
+        model = get_user_model()
+        fields = ["id", "next_badge_levels"]
+
+    def get_next_badge_levels(self, obj):
+        next_levels = {}
+
+        badge_requirements = {
+            "VETERAN": {
+                3: "Bronze",
+                6: "Silver",
+                12: "Gold",
+                18: "Obsidian",
+                24: "Mixelo",
+            },
+            "STORYTELLER": {
+                5: "Bronze",
+                20: "Silver",
+                50: "Gold",
+                100: "Obsidian",
+                200: "Mixelo",
+            },
+            "POPULAR": {
+                5: "Bronze",
+                20: "Silver",
+                50: "Gold",
+                100: "Obsidian",
+                200: "Mixelo",
+            },
+            "COLLABORATOR": {
+                10: "Bronze",
+                30: "Silver",
+                70: "Gold",
+                130: "Obsidian",
+                250: "Mixelo",
+            },
+            "EXPLORER": {
+                20: "Bronze",
+                30: "Silver",
+                40: "Gold",
+                55: "Obsidian",
+                70: "Mixelo",
+            },
+        }
+
+        user_progress = {
+            "VETERAN": (now() - obj.date_joined).days // 30,
+            "STORYTELLER": obj.stories.count(),
+            "POPULAR": Like.objects.filter(
+                content_type=ContentType.objects.get_for_model(Story),
+                object_id__in=obj.stories.values_list("id", flat=True),
+                liked=True,
+            ).count()
+            + Like.objects.filter(
+                content_type=ContentType.objects.get_for_model(Comment),
+                object_id__in=Comment.objects.filter(user=obj).values_list("id", flat=True),
+                liked=True,
+            ).count(),
+            "COLLABORATOR": obj.comment_set.count(),
+            "EXPLORER": (UserStoryView.objects.filter(user=obj).count() / max(Story.objects.count(), 1)) * 100,
+        }
+        for badge_type, levels in badge_requirements.items():
+            current_level = (0, None)
+            next_level = None
+            for requirement, level in levels.items():
+                if user_progress[badge_type] >= requirement:
+                    current_level = (requirement, level)
+                else:
+                    next_level = (requirement, level)
+                    break
+            if next_level is not None:
+                progress = user_progress[badge_type] - current_level[0]
+                section = (next_level[0] - current_level[0])
+                percentage = (progress/ section) * 100
+                next_levels[badge_type] = {"next_level": next_level[1],  "percentage": round(percentage, 2)}
+            else:
+                next_levels[badge_type] =  {"next_level": None, "percentage": 100}
+        return next_levels
+
+
 class UserDetailSerializer(serializers.ModelSerializer):
     country = CountryField(name_only=True)
     birth_year = serializers.SerializerMethodField()
@@ -148,6 +234,7 @@ class PasswordResetSerializer(UserSerializer):
 
 class UserBadgeSerializer(serializers.ModelSerializer):
     level_colors = serializers.SerializerMethodField()
+
     class Meta:
         model = UserBadge
         fields = "__all__"

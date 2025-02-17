@@ -24,6 +24,7 @@ from .serializers import (
     PasswordResetSerializer,
     UserMeSerializer,
     CompleteUserSerializer,
+    UserBadgeInfoSerializer,
     ProfileColorSerializer,
     ExperienceSerializer,
     GenderSerializer,
@@ -145,6 +146,16 @@ class UserViewSet(viewsets.ModelViewSet):
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
         serializer = CompleteUserSerializer(request.user, context={"request": request})
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="user-badge-information")
+    def user_badge_information(self, request, *args, **kwargs):
+        """
+        Return all information about the authenticated user.
+        """
+        if not request.user.is_authenticated:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
+        serializer = UserBadgeInfoSerializer(request.user, context={"request": request})
         return Response(serializer.data)
 
     @action(detail=False, methods=["put"])
