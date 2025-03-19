@@ -77,6 +77,7 @@ class UserMeSerializer(serializers.ModelSerializer):
             "user_level",
             "profile_color",
             "notifications",
+            "active_days",
         ]
 
     def get_picture(self, obj):

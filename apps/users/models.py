@@ -65,6 +65,7 @@ class CustomUser(AbstractUser):
     linkedin_profile = models.CharField(max_length=50, null=True, blank=True)
     country = CountryField(blank=True, null=True)
     reset_code = models.CharField(max_length=50, null=True, blank=True)
+    active_days = models.IntegerField(default=0)
 
     # Settings fields:
     show_info = models.BooleanField(default=True)  # Shows detailed profile info to others
