@@ -32,7 +32,6 @@ class TopicTagsPagination(PageNumberPagination):
 class TopicTagsViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = TopicTag.objects.all().order_by("id")
     serializer_class = TopicTagSerializer
-    permission_classes = [IsAuthenticated]
     pagination_class = TopicTagsPagination
     filterset_fields = {
         "name": ("exact", "icontains"),
@@ -42,7 +41,6 @@ class TopicTagsViewSet(viewsets.ReadOnlyModelViewSet):
 class TopicsViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Topic.objects.all().order_by("id")
     serializer_class = TopicSerializer
-    permission_classes = [IsAuthenticated]
     filterset_fields = {
         "title": ("exact", "icontains"),
         "tag": ("exact", "in"),

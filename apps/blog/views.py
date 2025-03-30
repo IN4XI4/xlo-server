@@ -69,7 +69,7 @@ def clean_data(data):
 
 def safe_json_loads(value, default=None):
     """
-    Intenta cargar un JSON válido desde un valor dado. 
+    Intenta cargar un JSON válido desde un valor dado.
     Si falla, devuelve un valor predeterminado.
     """
     try:
@@ -77,8 +77,15 @@ def safe_json_loads(value, default=None):
     except (TypeError, json.JSONDecodeError):
         return default
 
+
+class StoriesPagination(PageNumberPagination):
+    page_size = 5
+    page_size_query_param = "page_size"
+    max_page_size = 50
+
+
 class BlocksPagination(PageNumberPagination):
-    page_size = 20
+    page_size = 50
 
 
 class NotificationsPagination(PageNumberPagination):
@@ -97,16 +104,18 @@ class StoriesViewSet(viewsets.ModelViewSet):
         "user__username": ("icontains",),
         "is_active": ("exact",),
         "spaces": ("exact",),
+        "views_count": ("exact",),
     }
-    ordering_fields = ["created_time"]
+    ordering_fields = ["created_time", "views_count"]
     ordering = ["created_time"]
+    pagination_class = StoriesPagination
     filter_backends = [UserOwnedFilterBackend, DjangoFilterBackend, OrderingFilter]
 
     def get_serializer_class(self):
         """
         Return the class to use for the serializer.
         """
-        if self.action in ["retrieve", "list", "find_by_slug"]:
+        if self.action in ["retrieve", "list", "find_by_slug", "liked_stories"]:
             return StoryDetailSerializer
         return StorySerializer
 
@@ -119,7 +128,14 @@ class StoriesViewSet(viewsets.ModelViewSet):
         - QuerySet: A queryset of Story objects.
         """
         user = self.request.user
-        return Story.objects.filter(is_active=True).filter(Q(is_private=False) | Q(user=user))
+        queryset = Story.objects.filter(is_active=True)
+
+        if user.is_authenticated:
+            queryset = queryset.filter(Q(is_private=False) | Q(user=user))
+        else:
+            queryset = queryset.filter(is_private=False, free_access=True)
+
+        return queryset
 
     def get_permissions(self):
         """
@@ -127,7 +143,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
         """
         if self.action == "approve_story":
             permission_classes = [IsStaffOrSuperUser()]
-        elif self.action == "find_by_slug":
+        elif self.action in ["find_by_slug", "list"]:
             return [AllowAny()]
         else:
             permission_classes = [permission() for permission in self.permission_classes]
@@ -202,6 +218,26 @@ class StoriesViewSet(viewsets.ModelViewSet):
         story.is_active = True
         story.save()
         return Response({"message": "Story approved"}, status=status.HTTP_202_ACCEPTED)
+
+    @action(detail=False, methods=["get"])
+    def liked_stories(self, request):
+        user = request.user
+        if not user.is_authenticated:
+            return Response({"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        story_content_type = ContentType.objects.get_for_model(Story)
+        liked_stories_ids = Like.objects.filter(user=user, content_type=story_content_type, liked=True).values_list(
+            "object_id", flat=True
+        )
+        liked_stories = Story.objects.filter(id__in=liked_stories_ids, is_active=True)
+        liked_stories_queryset = self.filter_queryset(liked_stories)
+        page = self.paginate_queryset(liked_stories_queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(liked_stories_queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=["get"])
     def liked_topics_stories(self, request):

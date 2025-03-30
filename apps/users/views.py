@@ -1,6 +1,7 @@
 import re
 import random
 import string
+from datetime import datetime, timezone
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
@@ -24,6 +25,7 @@ from .serializers import (
     PasswordResetSerializer,
     UserMeSerializer,
     CompleteUserSerializer,
+    UserBadgeInfoSerializer,
     ProfileColorSerializer,
     ExperienceSerializer,
     GenderSerializer,
@@ -98,7 +100,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
         send_mail(
             "Reset your password",
-            f"Use the following code to reset your password: {reset_code}. Access https://www.mixelo.io/?view=resetpassword to proceed.",
+            f"Use the following code to reset your password: {reset_code}. Access https://www.mixelo.io/login?view=resetpassword to proceed.",
             settings.DEFAULT_FROM_EMAIL,
             [user.email],
             fail_silently=False,
@@ -129,8 +131,15 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         Return basic information about the authenticated user.
         """
-        if not request.user.is_authenticated:
+        user = request.user
+        if not user.is_authenticated:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
+        now = datetime.now(timezone.utc)
+
+        if user.last_login is None or user.last_login.date() < now.date():
+            user.active_days += 1
+            user.last_login = now
+            user.save(update_fields=["active_days", "last_login"])
         serializer = UserMeSerializer(request.user, context={"request": request})
         return Response(serializer.data)
 
@@ -142,6 +151,16 @@ class UserViewSet(viewsets.ModelViewSet):
         if not request.user.is_authenticated:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
         serializer = CompleteUserSerializer(request.user, context={"request": request})
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="user-badge-information")
+    def user_badge_information(self, request, *args, **kwargs):
+        """
+        Return all information about the authenticated user.
+        """
+        if not request.user.is_authenticated:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
+        serializer = UserBadgeInfoSerializer(request.user, context={"request": request})
         return Response(serializer.data)
 
     @action(detail=False, methods=["put"])
