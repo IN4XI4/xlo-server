@@ -1,9 +1,10 @@
 from django.db import models
+from django.db.models import JSONField
 from django.utils.text import slugify
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 
-from apps.users.models import CustomUser
+from apps.users.models import CustomUser, ProfileColor
 from apps.spaces.models import Space
 from apps.base.models import Topic, SoftSkill, Mentor
 
@@ -27,11 +28,58 @@ class Like(models.Model):
         return str(self.object_id)
 
 
+def story_image_upload_path(instance, filename):
+    return f"story_{instance.id}/{filename}"
+
+
 class Story(models.Model):
+    DIFFICULTY_LEVELS = {
+        1: ("Beginner", "#A8E6CF"),
+        2: ("Amateur", "#FFD3B6"),
+        3: ("Intermediate", "#FF8C42"),
+        4: ("Professional", "#4A90E2"),
+        5: ("Expert", "#6A0DAD"),
+    }
+
+    LANGUAGE_CHOICES = [
+        (None, "Unspecified Language"),
+        ("EN", "English"),
+        ("ES", "Spanish"),
+        ("FR", "French"),
+        ("DE", "German"),
+        ("IT", "Italian"),
+        ("PT", "Portuguese"),
+        ("OT", "Other"),
+    ]
+
+    AGE_MOMENTS = [
+        (None, "Unspecified Age"),
+        (1, "Aged 5 to 10"),
+        (2, "Aged 10 to 15"),
+        (3, "Aged 15 to 20"),
+        (4, "Aged 20 to 30"),
+        (5, "Aged 40 to 50"),
+        (6, "Aged 50 to 60"),
+        (7, "Aged 60 to 70"),
+        (8, "Aged 70 and more"),
+    ]
+
+    IDENTITY_CHOICES = [
+        (None, "Unspecified Identity"),
+        (1, "Instinctive Identity"),
+        (2, "Emotional Identity"),
+        (3, "Mental Identity"),
+    ]
+
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="stories")
     topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, related_name="stories")
     title = models.CharField(max_length=300)
     subtitle = models.CharField(max_length=300, blank=True, null=True)
+    image = models.ImageField(upload_to=story_image_upload_path, blank=True, null=True)
+    difficulty_level = models.PositiveSmallIntegerField(
+        choices=[(key, value[0]) for key, value in DIFFICULTY_LEVELS.items()], null=True, blank=True
+    )
+    language = models.CharField(max_length=2, choices=LANGUAGE_CHOICES, blank=True, null=True)
     is_active = models.BooleanField(default=False)
     is_private = models.BooleanField(default=False)
     created_time = models.DateTimeField(auto_now_add=True)
@@ -42,6 +90,8 @@ class Story(models.Model):
     free_access = models.BooleanField(default=False)
     is_premium = models.BooleanField(default=False)
     spaces = models.ManyToManyField(Space, related_name="stories", blank=True)
+    life_moment = models.PositiveSmallIntegerField(choices=AGE_MOMENTS, null=True, blank=True)
+    identity_type = models.PositiveSmallIntegerField(choices=IDENTITY_CHOICES, null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.edited_time:
@@ -85,26 +135,48 @@ class Card(models.Model):
         return self.title
 
 
-class BlockType(models.Model):
-    name = models.CharField(max_length=150)
-
-    def __str__(self):
-        return self.name
-
-
 def block_image_upload_path(instance, filename):
     return f"story_{instance.card.story.id}/card_{instance.card.id}/{filename}"
 
 
 class Block(models.Model):
+
+    CONTENT_CHOICES = [
+        ("FACT", "Fact"),
+        ("MYTH", "Myth"),
+        ("OPINION", "Opinion"),
+    ]
+
+    BLOCK_TYPES = [
+        (1, "STANDARD"),
+        (2, "MONSTER"),
+        (3, "MENTOR"),
+        (4, "HERO"),
+        (5, "HIGHLIGHT"),
+        (6, "QUOTE"),
+        (7, "FLASHCARD"),
+        (8, "FACT"),
+        (9, "WONDER"),
+        (10, "QUESTION"),
+        (11, "TESTIMONIAL"),
+        (12, "REFLECTION"),
+    ]
+
     card = models.ForeignKey(Card, on_delete=models.CASCADE)
-    block_type = models.ForeignKey(BlockType, on_delete=models.SET_NULL, blank=True, null=True)
+    block_class = models.PositiveSmallIntegerField(choices=BLOCK_TYPES, default=1)
+    content_class = models.CharField(choices=CONTENT_CHOICES, blank=True, null=True)
+    title = models.CharField(max_length=50, blank=True, null=True)
     content = models.TextField()
+    content_2 = models.TextField(blank=True, null=True)
     image = models.ImageField(upload_to=block_image_upload_path, blank=True, null=True)
+    image_2 = models.ImageField(upload_to=block_image_upload_path, blank=True, null=True)
+    quoted_by = models.CharField(max_length=70, blank=True, null=True)
+    block_color = models.ForeignKey(ProfileColor, null=True, blank=True, on_delete=models.SET_NULL)
     order = models.IntegerField(default=0, blank=True)
+    options = JSONField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.card.title} - {self.block_type.name if self.block_type else 'No BlockType'}"
+        return f"{self.card.title} - {self.get_block_class_display()}"
 
 
 class Comment(models.Model):

@@ -1,4 +1,6 @@
+import json
 import random
+
 
 from django.db import transaction
 from django.db.models import F, OuterRef, Subquery, Q
@@ -19,7 +21,6 @@ from rest_framework.filters import OrderingFilter
 from .models import (
     Story,
     Card,
-    BlockType,
     Block,
     Comment,
     Like,
@@ -45,7 +46,6 @@ from .serializers import (
     CardSerializer,
     CommentSerializer,
     LikeSerializer,
-    BlockTypeSerializer,
     BlockSerializer,
     BlockDetailSerializer,
     UserStoryViewSerializer,
@@ -62,6 +62,20 @@ from apps.base.models import Topic
 from apps.users.utils import get_user_level
 from xloserver.constants import LEVEL_GROUPS
 
+
+def clean_data(data):
+    return {field: value for field, value in data.items() if value != ""}
+
+
+def safe_json_loads(value, default=None):
+    """
+    Intenta cargar un JSON válido desde un valor dado. 
+    Si falla, devuelve un valor predeterminado.
+    """
+    try:
+        return json.loads(value)
+    except (TypeError, json.JSONDecodeError):
+        return default
 
 class BlocksPagination(PageNumberPagination):
     page_size = 20
@@ -236,7 +250,12 @@ class StoriesViewSet(viewsets.ModelViewSet):
             "slug": story.slug,
             "is_private": story.is_private,
             "free_access": story.free_access,
+            "difficulty_level": story.difficulty_level,
+            "life_moments": story.life_moment,
+            "story_identities": story.identity_type,
+            "language": story.language,
             "cards": [],
+            "image": request.build_absolute_uri(story.image.url) if story.image else None,
         }
         for card in cards:
             blocks = Block.objects.filter(card=card).order_by("id")
@@ -244,8 +263,16 @@ class StoriesViewSet(viewsets.ModelViewSet):
                 {
                     "id": block.id,
                     "content": block.content,
-                    "blockType": block.block_type.id,
+                    "content_2": block.content_2,
+                    "blockType": block.block_class,
+                    "quoted_by": block.quoted_by,
+                    "title": block.title,
+                    "block_color": block.block_color_id,
+                    "block_color_string": block.block_color.color if block.block_color else None,
+                    "content_class": block.content_class,
                     "image": request.build_absolute_uri(block.image.url) if block.image else None,
+                    "image_2": request.build_absolute_uri(block.image_2.url) if block.image_2 else None,
+                    "options": block.options,
                 }
                 for block in blocks
             ]
@@ -264,16 +291,24 @@ class StoriesViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["post"], url_path="create-story-full")
     def create_story_full(self, request, *args, **kwargs):
         data = request.data
+        data = clean_data(data)
         story_data = {
             "title": data.get("title"),
             "subtitle": data.get("subtitle"),
             "topic": data.get("topic"),
+            "difficulty_level": data.get("difficulty_level"),
+            "language": data.get("language"),
+            "life_moment": data.get("life_moments"),
+            "identity_type": data.get("story_identities"),
             "is_private": data.get("is_private"),
             "free_access": data.get("free_access"),
         }
         story_serializer = StorySerializer(data=story_data)
         if story_serializer.is_valid():
             story = story_serializer.save(user=request.user, is_active=True)
+            if "image" in request.FILES:
+                story.image = request.FILES["image"]
+                story.save()
         else:
             return Response(story_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         cards_keys = [key for key in request.data.keys() if key.startswith("cards[")]
@@ -293,15 +328,22 @@ class StoriesViewSet(viewsets.ModelViewSet):
 
             blocks_keys = [key for key in request.data.keys() if key.startswith(f"cards[{card_index}].blocks[")]
             blocks_count = len(set(key.split("[")[2].split("]")[0] for key in blocks_keys))
-
             for block_index in range(blocks_count):
                 block_data = {
                     "card": card.id,
                     "content": request.data.get(f"cards[{card_index}].blocks[{block_index}].content"),
-                    "block_type": request.data.get(f"cards[{card_index}].blocks[{block_index}].blockType"),
+                    "content_2": request.data.get(f"cards[{card_index}].blocks[{block_index}].content_2"),
+                    "block_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].blockType"),
+                    "quoted_by": request.data.get(f"cards[{card_index}].blocks[{block_index}].quoted_by"),
+                    "block_color": request.data.get(f"cards[{card_index}].blocks[{block_index}].block_color"),
+                    "content_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].content_class"),
+                    "title": request.data.get(f"cards[{card_index}].blocks[{block_index}].title"),
+                    "options": safe_json_loads(request.data.get(f"cards[{card_index}].blocks[{block_index}].options")),
                 }
                 if f"cards[{card_index}].blocks[{block_index}].image" in request.FILES:
                     block_data["image"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image"]
+                if f"cards[{card_index}].blocks[{block_index}].image_2" in request.FILES:
+                    block_data["image_2"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image_2"]
                 block_serializer = BlockSerializer(data=block_data)
                 if block_serializer.is_valid():
                     block_serializer.save()
@@ -320,12 +362,22 @@ class StoriesViewSet(viewsets.ModelViewSet):
             return Response({"error": "Story not found."}, status=status.HTTP_404_NOT_FOUND)
 
         data = request.data
+        data = clean_data(data)
         story_data = {
             "title": data.get("title"),
             "subtitle": data.get("subtitle"),
             "is_private": data.get("is_private"),
             "free_access": data.get("free_access"),
+            "life_moment": data.get("life_moments"),
+            "identity_type": data.get("story_identities"),
+            "difficulty_level": data.get("difficulty_level"),
+            "language": data.get("language"),
         }
+        if story.image and not request.FILES.get("image"):
+            if not request.data.get("image"):
+                story.image = None
+        elif "image" in request.FILES:
+            story_data["image"] = request.FILES["image"]
         story_serializer = StorySerializer(story, data=story_data, partial=True)
         if story_serializer.is_valid():
             story.edited_time = timezone.now()
@@ -357,6 +409,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
 
             if card_serializer.is_valid():
                 card = card_serializer.save()
+                existing_card_ids.append(card.id)
             else:
                 return Response(card_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             self.handle_blocks(request, card, card_index)
@@ -367,14 +420,19 @@ class StoriesViewSet(viewsets.ModelViewSet):
     def handle_blocks(self, request, card, card_index):
         blocks_keys = [key for key in request.data.keys() if key.startswith(f"cards[{card_index}].blocks[")]
         blocks_count = len(set(key.split("[")[2].split("]")[0] for key in blocks_keys))
-
         existing_block_ids = []
         for block_index in range(blocks_count):
             block_id = request.data.get(f"cards[{card_index}].blocks[{block_index}].id")
             block_data = {
                 "card": card.id,
                 "content": request.data.get(f"cards[{card_index}].blocks[{block_index}].content"),
-                "block_type": request.data.get(f"cards[{card_index}].blocks[{block_index}].blockType"),
+                "content_2": request.data.get(f"cards[{card_index}].blocks[{block_index}].content_2"),
+                "block_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].blockType"),
+                "quoted_by": request.data.get(f"cards[{card_index}].blocks[{block_index}].quoted_by"),
+                "block_color": request.data.get(f"cards[{card_index}].blocks[{block_index}].block_color"),
+                "content_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].content_class"),
+                "title": request.data.get(f"cards[{card_index}].blocks[{block_index}].title"),
+                "options": safe_json_loads(request.data.get(f"cards[{card_index}].blocks[{block_index}].options")),
             }
             if block_id:
                 try:
@@ -385,15 +443,21 @@ class StoriesViewSet(viewsets.ModelViewSet):
                             block.image = None
                     elif f"cards[{card_index}].blocks[{block_index}].image" in request.FILES:
                         block_data["image"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image"]
+                    if block.image_2 and not request.FILES.get(f"cards[{card_index}].blocks[{block_index}].image_2"):
+                        if not request.data.get(f"cards[{card_index}].blocks[{block_index}].image_2"):
+                            block.image_2 = None
+                    elif f"cards[{card_index}].blocks[{block_index}].image_2" in request.FILES:
+                        block_data["image_2"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image_2"]
 
                     existing_block_ids.append(block_id)
                 except Block.DoesNotExist:
                     return Response({"error": f"Block with ID {block_id} not found."}, status=status.HTTP_404_NOT_FOUND)
             else:
-                block_serializer = BlockSerializer(data=block_data)
+                block_serializer = BlockSerializer(data=block_data, context={"request": request})
 
             if block_serializer.is_valid():
-                block_serializer.save()
+                block = block_serializer.save()
+                existing_block_ids.append(block.id)
             else:
                 return Response(block_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -455,15 +519,6 @@ class CardsViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class BlockTypesViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = BlockType.objects.all()
-    serializer_class = BlockTypeSerializer
-    filterset_fields = {
-        "name": ("exact", "icontains"),
-    }
-    pagination_class = BlocksPagination
-
-
 class BlocksViewSet(viewsets.ModelViewSet):
     serializer_class = BlockSerializer
     permission_classes = [BlockPermissions]
@@ -471,7 +526,7 @@ class BlocksViewSet(viewsets.ModelViewSet):
     filterset_fields = {
         "card": ("exact", "in"),
         "card__story": ("exact", "in"),
-        "block_type": ("exact", "in"),
+        "block_class": ("exact", "in"),
     }
     ordering_fields = [
         "order",

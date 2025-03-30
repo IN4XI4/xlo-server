@@ -2,8 +2,9 @@ from django.contrib.auth import get_user_model
 from django_countries.serializer_fields import CountryField
 from rest_framework import serializers
 
-from .models import ProfileColor, Experience, Gender
+from .models import ProfileColor, Experience, Gender, UserBadge, BadgeLevels
 from apps.users.utils import get_user_level
+
 
 
 class ProfileColorSerializer(serializers.ModelSerializer):
@@ -59,6 +60,7 @@ class UserMeSerializer(serializers.ModelSerializer):
     picture = serializers.SerializerMethodField()
     user_level_display = serializers.SerializerMethodField()
     notifications = serializers.SerializerMethodField()
+    profile_color = serializers.ReadOnlyField(source="profile_color.color")
 
     class Meta:
         model = get_user_model()
@@ -70,6 +72,8 @@ class UserMeSerializer(serializers.ModelSerializer):
             "date_joined",
             "picture",
             "user_level_display",
+            "user_level",
+            "profile_color",
             "notifications",
         ]
 
@@ -147,3 +151,13 @@ class UserDetailSerializer(serializers.ModelSerializer):
 class PasswordResetSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         fields = ("password", "password2", "reset_code")
+
+
+class UserBadgeSerializer(serializers.ModelSerializer):
+    level_colors = serializers.SerializerMethodField()
+    class Meta:
+        model = UserBadge
+        fields = "__all__"
+
+    def get_level_colors(self, obj):
+        return BadgeLevels.get_colors(obj.level)

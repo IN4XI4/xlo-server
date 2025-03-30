@@ -4,7 +4,6 @@ from rest_framework import serializers
 from .models import (
     Story,
     Card,
-    BlockType,
     Block,
     Comment,
     Like,
@@ -15,6 +14,8 @@ from .models import (
     Notification,
 )
 
+from apps.users.models import UserBadge, BadgeLevels
+from apps.users.serializers import UserBadgeSerializer
 
 class StorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -39,6 +40,12 @@ class StorySerializer(serializers.ModelSerializer):
 
 
 class StoryDetailSerializer(serializers.ModelSerializer):
+    topic_title = serializers.ReadOnlyField(source="topic.title")
+    topic_slug = serializers.ReadOnlyField(source="topic.slug")
+    tag_name = serializers.ReadOnlyField(source="topic.tag.name")
+    user_color = serializers.ReadOnlyField(source="user.profile_color.color")
+    user_picture = serializers.ImageField(source="user.profile_picture", required=False, allow_null=True, use_url=True)
+    is_owner = serializers.SerializerMethodField()
     cards_count = serializers.SerializerMethodField()
     comments_count = serializers.SerializerMethodField()
     likes_count = serializers.SerializerMethodField()
@@ -47,10 +54,10 @@ class StoryDetailSerializer(serializers.ModelSerializer):
     user_has_viewed = serializers.SerializerMethodField()
     previous_story_slug = serializers.SerializerMethodField()
     next_story_slug = serializers.SerializerMethodField()
-    is_owner = serializers.SerializerMethodField()
-    topic_title = serializers.ReadOnlyField(source="topic.title")
-    topic_slug = serializers.ReadOnlyField(source="topic.slug")
-    tag_name = serializers.ReadOnlyField(source="topic.tag.name")
+    owner_name = serializers.SerializerMethodField()
+    difficulty_name = serializers.SerializerMethodField()
+    language_name = serializers.SerializerMethodField()
+    difficulty_color = serializers.SerializerMethodField()
 
     class Meta:
         model = Story
@@ -102,6 +109,22 @@ class StoryDetailSerializer(serializers.ModelSerializer):
             return next_story.slug
         return None
 
+    def get_owner_name(self, obj):
+        user = obj.user
+        if user.first_name:
+            return f"{user.first_name} {user.last_name}".strip()
+        else:
+            return user.email.split("@")[0]
+
+    def get_difficulty_color(self, obj):
+        return obj.DIFFICULTY_LEVELS[obj.difficulty_level][1] if obj.difficulty_level is not None else None
+
+    def get_difficulty_name(self, obj):
+        return obj.get_difficulty_level_display()
+
+    def get_language_name(self, obj):
+        return obj.get_language_display()
+
 
 class CardSerializer(serializers.ModelSerializer):
     soft_skill_color = serializers.ReadOnlyField(source="soft_skill.color")
@@ -119,6 +142,10 @@ class CardSerializer(serializers.ModelSerializer):
     mentor_profile = serializers.SerializerMethodField()
     mentor_picture = serializers.SerializerMethodField()
     user_has_recalled = serializers.SerializerMethodField()
+    owner_picture = serializers.FileField(
+        source="story.user.profile_picture", required=False, allow_null=True, use_url=True
+    )
+    owner_color = serializers.ReadOnlyField(source="story.user.profile_color.color")
 
     def get_user_has_recalled(self, obj):
         user = self.context["request"].user
@@ -163,20 +190,18 @@ class CardSerializer(serializers.ModelSerializer):
         read_only_fields = ["created_time", "updated_time"]
 
 
-class BlockTypeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BlockType
-        fields = "__all__"
-
-
 class BlockSerializer(serializers.ModelSerializer):
-    block_type_name = serializers.ReadOnlyField(source="block_type.name")
+    block_color_string = serializers.ReadOnlyField(source="block_color.color")
+    block_type_name = serializers.SerializerMethodField()
     user_has_liked = serializers.SerializerMethodField()
     user_has_recalled = serializers.SerializerMethodField()
 
     class Meta:
         model = Block
         fields = "__all__"
+
+    def get_block_type_name(self, obj):
+        return obj.get_block_class_display()
 
     def get_user_has_liked(self, obj):
         user = self.context["request"].user
@@ -196,9 +221,25 @@ class BlockSerializer(serializers.ModelSerializer):
         else:
             return {"recall": False, "level": None, "recall_id": None}
 
+    def validate(self, data):
+        if data.get("block_class") == 10:  # Type "QUESTION"
+            options = data.get("options", [])
+            correct_answers = options.get("correct_answer", [])
+            incorrect_answers = options.get("incorrect_answers", [])
+
+            if not correct_answers:
+                raise serializers.ValidationError("A question block must have at least one correct answer.")
+            if not incorrect_answers:
+                raise serializers.ValidationError("A question block must have at least one incorrect answer.")
+
+            if not isinstance(correct_answers, list) or not isinstance(incorrect_answers, list):
+                raise serializers.ValidationError("Correct and incorrect answers must be lists.")
+        return data
+
 
 class BlockDetailSerializer(serializers.ModelSerializer):
-    block_type_name = serializers.ReadOnlyField(source="block_type.name")
+    block_type_name = serializers.SerializerMethodField()
+    block_color_string = serializers.ReadOnlyField(source="block_color.color")
     story_title = serializers.ReadOnlyField(source="card.story.title")
     card_title = serializers.ReadOnlyField(source="card.title")
     soft_skill_description = serializers.ReadOnlyField(source="card.soft_skill.description")
@@ -219,10 +260,16 @@ class BlockDetailSerializer(serializers.ModelSerializer):
     mentor_picture = serializers.ImageField(source="card.mentor.picture", required=False, allow_null=True, use_url=True)
     user_has_liked = serializers.SerializerMethodField()
     user_has_recalled = serializers.SerializerMethodField()
+    owner_picture = serializers.ImageField(
+        source="card.story.user.profile_picture", required=False, allow_null=True, use_url=True
+    )
 
     class Meta:
         model = Block
         fields = "__all__"
+
+    def get_block_type_name(self, obj):
+        return obj.get_block_class_display()
 
     def get_user_has_liked(self, obj):
         user = self.context["request"].user
@@ -250,6 +297,7 @@ class CommentSerializer(serializers.ModelSerializer):
     formatted_created_time = serializers.SerializerMethodField()
     user_has_liked = serializers.SerializerMethodField()
     user_has_recalled = serializers.SerializerMethodField()
+    commentor_last_badge = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
@@ -279,6 +327,16 @@ class CommentSerializer(serializers.ModelSerializer):
             return {"recall": True, "level": recall.importance_level, "recall_id": recall.id}
         else:
             return {"recall": False, "level": None, "recall_id": None}
+
+    def get_commentor_last_badge(self, obj):
+        user = obj.user
+        last_badge = UserBadge.objects.filter(user=user).order_by("-awarded_at").first()
+        if last_badge:
+            badge_data = UserBadgeSerializer(last_badge).data
+            badge_data["level_colors"] = BadgeLevels.get_colors(last_badge.level)
+            return badge_data
+
+        return None
 
 
 class LikeSerializer(serializers.ModelSerializer):
