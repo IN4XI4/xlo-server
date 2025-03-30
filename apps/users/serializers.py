@@ -72,7 +72,6 @@ class UserMeSerializer(serializers.ModelSerializer):
             "date_joined",
             "picture",
             "user_level_display",
-            "user_level",
             "profile_color",
             "notifications",
         ]
