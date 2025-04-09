@@ -10,9 +10,11 @@ class SpaceSerializer(serializers.ModelSerializer):
 
 
 class SpaceActiveSerializer(serializers.ModelSerializer):
+    color_name = serializers.ReadOnlyField(source="color.color")
+
     class Meta:
         model = Space
-        fields = ("name", "image", "color", "slug")
+        fields = ("name", "image", "color", "slug", "color_name")
 
 
 class SpaceDetailSerializer(serializers.ModelSerializer):

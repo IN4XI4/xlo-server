@@ -24,7 +24,11 @@ class TopicReadOnlySerializer(serializers.ModelSerializer):
         return like.id if like else False
 
     def get_story_count(self, obj):
-        return obj.stories.filter(is_private=False).count()
+        space_id = self.context.get("space_id")
+        stories = obj.stories.filter(is_private=False)
+        if space_id:
+            stories = stories.filter(spaces__id=space_id)
+        return stories.count()
 
 
 class TopicTagSerializer(serializers.ModelSerializer):
