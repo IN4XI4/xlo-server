@@ -64,6 +64,9 @@ class UserMeSerializer(serializers.ModelSerializer):
     user_level_display = serializers.SerializerMethodField()
     notifications = serializers.SerializerMethodField()
     profile_color = serializers.ReadOnlyField(source="profile_color.color")
+    story_count = serializers.SerializerMethodField()
+    likes_count = serializers.SerializerMethodField()
+    views_count = serializers.SerializerMethodField()
 
     class Meta:
         model = get_user_model()
@@ -78,6 +81,9 @@ class UserMeSerializer(serializers.ModelSerializer):
             "profile_color",
             "notifications",
             "active_days",
+            "story_count",
+            "likes_count",
+            "views_count",
         ]
 
     def get_picture(self, obj):
@@ -99,6 +105,14 @@ class UserMeSerializer(serializers.ModelSerializer):
         }
         return notification_info
 
+    def get_story_count(self, obj):
+        return obj.stories.count()
+
+    def get_likes_count(self, obj):
+        return obj.like_set.count()
+
+    def get_views_count(self, obj):
+        return obj.userstoryview_set.count()
 
 class CompleteUserSerializer(serializers.ModelSerializer):
     country = CountryField(name_only=True)
