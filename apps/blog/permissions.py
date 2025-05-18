@@ -28,7 +28,7 @@ class StoryPermissions(permissions.BasePermission):
             return False
 
         if view.action == "create":
-            user_level = get_user_level(request.user)
+            user_level, _ = get_user_level(request.user)
             return (
                 user_level >= self.creator_required_value
                 or request.user.is_staff
@@ -53,7 +53,7 @@ class CardPermissions(StoryPermissions):
             return False
 
         if view.action == "create":
-            user_level = get_user_level(request.user)
+            user_level, _ = get_user_level(request.user)
             has_create_permission = (
                 user_level >= self.creator_required_value
                 or request.user.is_staff
@@ -79,7 +79,7 @@ class BlockPermissions(permissions.BasePermission):
             return False
 
         if view.action == "create":
-            user_level = get_user_level(request.user)
+            user_level, _ = get_user_level(request.user)
             has_create_permission = (
                 user_level >= self.creator_required_value
                 or request.user.is_staff
@@ -114,7 +114,7 @@ class CommentPermissions(StoryPermissions):
             return False
 
         if view.action == "create":
-            user_level = get_user_level(request.user)
+            user_level, _ = get_user_level(request.user)
             return (
                 user_level >= self.commentor_required_value
                 or request.user.is_staff

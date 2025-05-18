@@ -5,6 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelation
 
 from apps.users.models import CustomUser, ProfileColor
+from apps.spaces.models import Space
 from apps.base.models import Topic, SoftSkill, Mentor
 
 
@@ -87,6 +88,8 @@ class Story(models.Model):
     views_count = models.IntegerField(default=0)
     slug = models.SlugField(max_length=320, blank=True, unique=True)
     free_access = models.BooleanField(default=False)
+    is_premium = models.BooleanField(default=False)
+    spaces = models.ManyToManyField(Space, related_name="stories", blank=True)
     life_moment = models.PositiveSmallIntegerField(choices=AGE_MOMENTS, null=True, blank=True)
     identity_type = models.PositiveSmallIntegerField(choices=IDENTITY_CHOICES, null=True, blank=True)
 

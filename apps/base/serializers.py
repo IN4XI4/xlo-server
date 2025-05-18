@@ -24,7 +24,11 @@ class TopicReadOnlySerializer(serializers.ModelSerializer):
         return like.id if like else False
 
     def get_story_count(self, obj):
-        return obj.stories.filter(is_private=False).count()
+        space_id = self.context.get("space_id")
+        stories = obj.stories.filter(is_private=False)
+        if space_id:
+            stories = stories.filter(spaces__id=space_id)
+        return stories.count()
 
 
 class TopicTagSerializer(serializers.ModelSerializer):
@@ -66,7 +70,8 @@ class TopicSerializer(serializers.ModelSerializer):
         if user.is_anonymous:
             return False
         creator_level = LEVEL_GROUPS.get("creator", 0)
-        return get_user_level(user) >= creator_level or user.is_staff or user.is_superuser
+        user_level_value, _ = get_user_level(user)
+        return user_level_value >= creator_level or user.is_staff or user.is_superuser
 
     class Meta:
         model = Topic

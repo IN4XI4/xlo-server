@@ -37,6 +37,11 @@ class TopicTagsViewSet(viewsets.ReadOnlyModelViewSet):
         "name": ("exact", "icontains"),
     }
 
+    def get_queryset(self):
+        space_id = self.request.query_params.get("space_id")
+        if space_id:
+            return TopicTag.objects.filter(spaces__id=space_id).distinct().order_by("id")
+        return TopicTag.objects.all().order_by("id")
 
 class TopicsViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Topic.objects.all().order_by("id")
@@ -88,14 +93,14 @@ class MentorsViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        user_level = get_user_level(user)
+        user_level, _ = get_user_level(user)
         queryset = Mentor.objects.filter(user__isnull=True)
 
         if user_level >= LEVEL_GROUPS["creator lvl 2"]:
             queryset = queryset | Mentor.objects.filter(user=user)
         if user_level >= LEVEL_GROUPS["creator lvl 3"]:
             queryset = queryset | Mentor.objects.filter(created_by=user)
-        return queryset.order_by("id")
+        return queryset.order_by("-id")
 
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)

@@ -103,6 +103,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
         "user": ("exact",),
         "user__username": ("icontains",),
         "is_active": ("exact",),
+        "spaces": ("exact",),
         "views_count": ("exact",),
     }
     ordering_fields = ["created_time", "views_count"]
@@ -472,19 +473,21 @@ class StoriesViewSet(viewsets.ModelViewSet):
             if block_id:
                 try:
                     block = Block.objects.get(id=block_id, card=card)
-                    block_serializer = BlockSerializer(block, data=block_data, partial=True)
-                    if block.image and not request.FILES.get(f"cards[{card_index}].blocks[{block_index}].image"):
-                        if not request.data.get(f"cards[{card_index}].blocks[{block_index}].image"):
-                            block.image = None
-                    elif f"cards[{card_index}].blocks[{block_index}].image" in request.FILES:
-                        block_data["image"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image"]
-                    if block.image_2 and not request.FILES.get(f"cards[{card_index}].blocks[{block_index}].image_2"):
-                        if not request.data.get(f"cards[{card_index}].blocks[{block_index}].image_2"):
-                            block.image_2 = None
-                    elif f"cards[{card_index}].blocks[{block_index}].image_2" in request.FILES:
-                        block_data["image_2"] = request.FILES[f"cards[{card_index}].blocks[{block_index}].image_2"]
+                    image_file = request.FILES.get(f"cards[{card_index}].blocks[{block_index}].image")
+                    image_value = request.data.get(f"cards[{card_index}].blocks[{block_index}].image")
+                    if image_file:
+                        block_data["image"] = image_file
+                    elif not image_value:
+                        block.image = None 
 
-                    existing_block_ids.append(block_id)
+                    image_2_file = request.FILES.get(f"cards[{card_index}].blocks[{block_index}].image_2")
+                    image_2_value = request.data.get(f"cards[{card_index}].blocks[{block_index}].image_2")
+                    if image_2_file:
+                        block_data["image_2"] = image_2_file
+                    elif not image_2_value:
+                        block.image_2 = None
+
+                    block_serializer = BlockSerializer(block, data=block_data, partial=True)
                 except Block.DoesNotExist:
                     return Response({"error": f"Block with ID {block_id} not found."}, status=status.HTTP_404_NOT_FOUND)
             else:
@@ -692,7 +695,7 @@ class UserStoryViewCreate(CreateAPIView):
         story = get_object_or_404(Story, id=story_id)
 
         UserStoryView.objects.get_or_create(user=self.request.user, story=story)
-        user_level = get_user_level(self.request.user)
+        user_level, _ = get_user_level(self.request.user)
         commentor_level = LEVEL_GROUPS.get("commentor", 0)
         if self.request.user.is_superuser or self.request.user.is_staff or user_level >= commentor_level:
             return

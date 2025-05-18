@@ -20,7 +20,22 @@ from apps.users.serializers import UserBadgeSerializer
 class StorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Story
-        fields = "__all__"
+        fields = [
+            "id",
+            "user",
+            "topic",
+            "title",
+            "subtitle",
+            "is_active",
+            "is_private",
+            "created_time",
+            "updated_time",
+            "edited_time",
+            "views_count",
+            "slug",
+            "free_access",
+            "is_premium",
+        ]
         read_only_fields = ["is_active", "created_time", "updated_time", "user"]
 
 

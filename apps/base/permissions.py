@@ -17,7 +17,7 @@ class MentorPermissions(permissions.BasePermission):
             return False
 
         if view.action == "create":
-            user_level = get_user_level(request.user)
+            user_level, _ = get_user_level(request.user)
             return user_level >= self.creator_lvl_3_required_value
 
         return True

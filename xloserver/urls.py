@@ -27,4 +27,5 @@ urlpatterns = [
     path("base/", include("apps.base.urls", namespace="base")),
     path("blog/", include("apps.blog.urls", namespace="blog")),
     path("users/", include("apps.users.urls", namespace="users")),
+    path("spaces/", include("apps.spaces.urls", namespace="spaces")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

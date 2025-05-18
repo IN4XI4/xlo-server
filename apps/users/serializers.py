@@ -9,7 +9,6 @@ from .models import ProfileColor, Experience, Gender, UserBadge, BadgeLevels
 from apps.users.utils import get_user_level
 from xloserver.constants import LEVEL_GROUPS
 
-
 class ProfileColorSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProfileColor
@@ -61,12 +60,13 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UserMeSerializer(serializers.ModelSerializer):
     picture = serializers.SerializerMethodField()
-    user_level = serializers.SerializerMethodField()
+    user_level_display = serializers.SerializerMethodField()
     notifications = serializers.SerializerMethodField()
     profile_color = serializers.ReadOnlyField(source="profile_color.color")
     story_count = serializers.SerializerMethodField()
     likes_count = serializers.SerializerMethodField()
     views_count = serializers.SerializerMethodField()
+    is_creator = serializers.SerializerMethodField()
 
     class Meta:
         model = get_user_model()
@@ -77,13 +77,14 @@ class UserMeSerializer(serializers.ModelSerializer):
             "email",
             "date_joined",
             "picture",
-            "user_level",
+            "user_level_display",
             "profile_color",
             "notifications",
             "active_days",
             "story_count",
             "likes_count",
             "views_count",
+            "is_creator",
         ]
 
     def get_picture(self, obj):
@@ -92,8 +93,9 @@ class UserMeSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(obj.profile_picture.url)
         return None
 
-    def get_user_level(self, obj):
-        return get_user_level(obj)
+    def get_user_level_display(self, obj):
+        numeric_level, level_name = get_user_level(obj)
+        return {"level_value": numeric_level, "level_name": level_name}
 
     def get_notifications(self, obj):
         unread_notifications = obj.notifications.filter(has_viewed=False)
@@ -113,12 +115,25 @@ class UserMeSerializer(serializers.ModelSerializer):
     def get_views_count(self, obj):
         return obj.userstoryview_set.count()
 
+    def get_is_creator(self, obj):
+        if obj.is_anonymous:
+            return False
+        creator_level = LEVEL_GROUPS.get("creator", 0)
+        user_level_value, _ = get_user_level(obj)
+        return user_level_value >= creator_level or obj.is_staff or obj.is_superuser
+
+
 class CompleteUserSerializer(serializers.ModelSerializer):
     country = CountryField(name_only=True)
+    user_level_display = serializers.SerializerMethodField()
 
     class Meta:
         model = get_user_model()
-        fields = "__all__"
+        exclude = ["password"]
+
+    def get_user_level_display(self, obj):
+        numeric_level, level_name = get_user_level(obj)
+        return {"level_value": numeric_level, "level_name": level_name}
 
 
 class UserBadgeInfoSerializer(serializers.ModelSerializer):
@@ -196,11 +211,11 @@ class UserBadgeInfoSerializer(serializers.ModelSerializer):
                     break
             if next_level is not None:
                 progress = user_progress[badge_type] - current_level[0]
-                section = (next_level[0] - current_level[0])
-                percentage = (progress/ section) * 100
-                next_levels[badge_type] = {"next_level": next_level[1],  "percentage": round(percentage, 2)}
+                section = next_level[0] - current_level[0]
+                percentage = (progress / section) * 100
+                next_levels[badge_type] = {"next_level": next_level[1], "percentage": round(percentage, 2)}
             else:
-                next_levels[badge_type] =  {"next_level": None, "percentage": 100}
+                next_levels[badge_type] = {"next_level": None, "percentage": 100}
         return next_levels
 
 
