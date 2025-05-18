@@ -9,7 +9,7 @@ from apps.base.models import TopicTag
 class Space(models.Model):
     ACCESS_CHOICES = [
         ("free", "Free"),
-        ("premium", "Premium"),
+        ("private", "Private"),
     ]
 
     name = models.CharField(max_length=250, unique=True)

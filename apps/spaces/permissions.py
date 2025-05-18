@@ -24,7 +24,7 @@ class SpacePermissions(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        return obj == request.user
+        return obj.owner == request.user
 
 
 class MembershipRequestPermissions(permissions.BasePermission):

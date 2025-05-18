@@ -7,8 +7,7 @@ from rest_framework import serializers
 from apps.blog.models import Like, Story, Comment, UserStoryView
 from .models import ProfileColor, Experience, Gender, UserBadge, BadgeLevels
 from apps.users.utils import get_user_level
-
-
+from xloserver.constants import LEVEL_GROUPS
 
 class ProfileColorSerializer(serializers.ModelSerializer):
     class Meta:
@@ -67,6 +66,7 @@ class UserMeSerializer(serializers.ModelSerializer):
     story_count = serializers.SerializerMethodField()
     likes_count = serializers.SerializerMethodField()
     views_count = serializers.SerializerMethodField()
+    is_creator = serializers.SerializerMethodField()
 
     class Meta:
         model = get_user_model()
@@ -84,6 +84,7 @@ class UserMeSerializer(serializers.ModelSerializer):
             "story_count",
             "likes_count",
             "views_count",
+            "is_creator",
         ]
 
     def get_picture(self, obj):
@@ -113,6 +114,14 @@ class UserMeSerializer(serializers.ModelSerializer):
 
     def get_views_count(self, obj):
         return obj.userstoryview_set.count()
+
+    def get_is_creator(self, obj):
+        if obj.is_anonymous:
+            return False
+        creator_level = LEVEL_GROUPS.get("creator", 0)
+        user_level_value, _ = get_user_level(obj)
+        return user_level_value >= creator_level or obj.is_staff or obj.is_superuser
+
 
 class CompleteUserSerializer(serializers.ModelSerializer):
     country = CountryField(name_only=True)
@@ -202,11 +211,11 @@ class UserBadgeInfoSerializer(serializers.ModelSerializer):
                     break
             if next_level is not None:
                 progress = user_progress[badge_type] - current_level[0]
-                section = (next_level[0] - current_level[0])
-                percentage = (progress/ section) * 100
-                next_levels[badge_type] = {"next_level": next_level[1],  "percentage": round(percentage, 2)}
+                section = next_level[0] - current_level[0]
+                percentage = (progress / section) * 100
+                next_levels[badge_type] = {"next_level": next_level[1], "percentage": round(percentage, 2)}
             else:
-                next_levels[badge_type] =  {"next_level": None, "percentage": 100}
+                next_levels[badge_type] = {"next_level": None, "percentage": 100}
         return next_levels
 
 

@@ -37,12 +37,11 @@ class TopicTagsViewSet(viewsets.ReadOnlyModelViewSet):
         "name": ("exact", "icontains"),
     }
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
+    def get_queryset(self):
         space_id = self.request.query_params.get("space_id")
         if space_id:
-            context["space_id"] = space_id
-        return context
+            return TopicTag.objects.filter(spaces__id=space_id).distinct().order_by("id")
+        return TopicTag.objects.all().order_by("id")
 
 class TopicsViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Topic.objects.all().order_by("id")

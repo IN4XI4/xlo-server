@@ -1,12 +1,43 @@
 from rest_framework import serializers
 
+from apps.base.models import TopicTag
 from .models import Space, MembershipRequest
 
 
 class SpaceSerializer(serializers.ModelSerializer):
+    category_ids = serializers.ListField(
+        child=serializers.IntegerField(), write_only=True, required=True, allow_empty=False
+    )
+    isPrivate = serializers.BooleanField(write_only=True)
+
     class Meta:
         model = Space
-        fields = ("name", "description", "image", "color", "owner", "access_type", "created_time", "updated_time")
+        fields = (
+            "name",
+            "description",
+            "image",
+            "color",
+            "owner",
+            "access_type",
+            "created_time",
+            "updated_time",
+            "category_ids",
+            "isPrivate",
+        )
+        read_only_fields = ("owner", "created_time", "updated_time")
+
+    def validate_color(self, value):
+        if not value:
+            raise serializers.ValidationError("This field is required.")
+        return value
+
+    def create(self, validated_data):
+        category_ids = validated_data.pop("category_ids", [])
+        is_private = validated_data.pop("isPrivate", False)
+        validated_data["access_type"] = "private" if is_private else "free"
+        space = Space.objects.create(**validated_data)
+        space.categories.set(TopicTag.objects.filter(id__in=category_ids))
+        return space
 
 
 class SpaceActiveSerializer(serializers.ModelSerializer):
