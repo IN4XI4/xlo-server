@@ -43,6 +43,14 @@ class TopicTagsViewSet(viewsets.ReadOnlyModelViewSet):
             return TopicTag.objects.filter(spaces__id=space_id).distinct().order_by("id")
         return TopicTag.objects.all().order_by("id")
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        space_id = self.request.query_params.get("space_id")
+        if space_id:
+            context["space_id"] = space_id
+        return context
+
+
 class TopicsViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Topic.objects.all().order_by("id")
     serializer_class = TopicSerializer
