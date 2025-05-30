@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.serializers import ValidationError
 
@@ -19,18 +20,26 @@ from .serializers import (
 from apps.base.serializers import TopicTagSerializer
 
 
+class SpacesPagination(PageNumberPagination):
+    page_size = 5
+    page_size_query_param = "page_size"
+    max_page_size = 50
+
+
 class SpaceViewSet(viewsets.ModelViewSet):
     permission_classes = [SpacePermissions]
-    queryset = Space.objects.all()
+    queryset = Space.objects.all().order_by("name")
     filterset_fields = {
         "name": ("exact", "icontains"),
+        "access_type": ("exact",),
         "owner": ("exact",),
-        "slug": ("exact",),
+        "slug": ("exact", "icontains"),
         "created_time": ("gte", "lte"),
         "updated_time": ("gte", "lte"),
         "admins": ("exact",),
         "members": ("exact",),
     }
+    pagination_class = SpacesPagination
 
     def get_serializer_class(self):
         """
@@ -102,7 +111,7 @@ class MembershipRequestViewSet(viewsets.ModelViewSet):
         return super().get_serializer_class()
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save(user=self.request.user, status="pending", request_type="request")
 
 
 class MembershipInvitationViewSet(viewsets.ModelViewSet):
