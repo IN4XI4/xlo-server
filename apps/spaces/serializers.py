@@ -9,16 +9,24 @@ class SpaceSerializer(serializers.ModelSerializer):
         child=serializers.IntegerField(), write_only=True, required=True, allow_empty=False
     )
     isPrivate = serializers.BooleanField(write_only=True)
+    members_count = serializers.SerializerMethodField()
+    is_member = serializers.SerializerMethodField()
+    has_membership_request = serializers.SerializerMethodField()
 
     class Meta:
         model = Space
         fields = (
+            "id",
             "name",
+            "slug",
             "description",
             "image",
             "color",
             "owner",
             "access_type",
+            "members_count",
+            "is_member",
+            "has_membership_request",
             "created_time",
             "updated_time",
             "category_ids",
@@ -38,6 +46,17 @@ class SpaceSerializer(serializers.ModelSerializer):
         space = Space.objects.create(**validated_data)
         space.categories.set(TopicTag.objects.filter(id__in=category_ids))
         return space
+
+    def get_members_count(self, obj):
+        return obj.members.count()
+
+    def get_is_member(self, obj):
+        user = self.context["request"].user
+        return user == obj.owner or user in obj.admins.all() or user in obj.members.all()
+
+    def get_has_membership_request(self, obj):
+        user = self.context["request"].user
+        return MembershipRequest.objects.filter(space=obj, user=user, request_type="request", status="pending").exists()
 
 
 class SpaceActiveSerializer(serializers.ModelSerializer):
@@ -100,6 +119,7 @@ class MembershipRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = MembershipRequest
         fields = "__all__"
+        read_only_fields = ("user", "status", "request_type")
 
 
 class MembershipRequestInvitationSerializer(serializers.ModelSerializer):
