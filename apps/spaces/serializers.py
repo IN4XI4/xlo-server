@@ -48,7 +48,11 @@ class SpaceSerializer(serializers.ModelSerializer):
         return space
 
     def get_members_count(self, obj):
-        return obj.members.count()
+        member_ids = set(obj.members.values_list('id', flat=True))
+        admin_ids = set(obj.admins.values_list('id', flat=True))
+        member_ids.update(admin_ids)
+        member_ids.add(obj.owner_id)
+        return len(member_ids)
 
     def get_is_member(self, obj):
         user = self.context["request"].user
