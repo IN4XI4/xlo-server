@@ -28,7 +28,6 @@ class SpacesPagination(PageNumberPagination):
 
 class SpaceViewSet(viewsets.ModelViewSet):
     permission_classes = [SpacePermissions]
-    queryset = Space.objects.all().order_by("name")
     filterset_fields = {
         "name": ("exact", "icontains"),
         "access_type": ("exact",),
@@ -40,6 +39,21 @@ class SpaceViewSet(viewsets.ModelViewSet):
         "members": ("exact",),
     }
     pagination_class = SpacesPagination
+
+    def get_queryset(self):
+        base_queryset = Space.objects.all().order_by("name")
+
+        if self.action == "list":
+            user = self.request.user
+            public_spaces = Q(access_type="free")
+
+            if user.is_authenticated:
+                private_user_spaces = Q(owner=user) | Q(admins=user) | Q(members=user)
+                return base_queryset.filter(public_spaces | private_user_spaces).distinct()
+
+            return base_queryset.filter(public_spaces)
+
+        return base_queryset
 
     def get_serializer_class(self):
         """
