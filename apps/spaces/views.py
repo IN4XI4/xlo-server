@@ -18,6 +18,8 @@ from .serializers import (
     MembershipRequestUpdateSerializer,
 )
 from apps.base.serializers import TopicTagSerializer
+from apps.users.models import CustomUser
+from apps.users.serializers import UserDetailSerializer
 
 
 class SpacesPagination(PageNumberPagination):
@@ -100,6 +102,116 @@ class SpaceViewSet(viewsets.ModelViewSet):
         serializer = SpaceDetailSerializer(spaces, many=True, context={"request": request})
         return Response(serializer.data)
 
+    @action(detail=False, methods=["get"], url_path="(?P<slug>[^/.]+)/members", permission_classes=[IsAuthenticated])
+    def members(self, request, slug=None):
+        try:
+            space = Space.objects.get(slug=slug)
+        except Space.DoesNotExist:
+            return Response({"detail": "Space not found."}, status=404)
+        queryset = space.members.all()
+
+        search_term = request.query_params.get("search")
+        if search_term:
+            queryset = queryset.filter(
+                Q(first_name__icontains=search_term)
+                | Q(last_name__icontains=search_term)
+                | Q(email__icontains=search_term)
+            )
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = UserDetailSerializer(page, many=True, context={"request": request})
+            return self.get_paginated_response(serializer.data)
+
+        serializer = UserDetailSerializer(queryset, many=True, context={"request": request})
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["get"], url_path="(?P<slug>[^/.]+)/admins", permission_classes=[IsAuthenticated])
+    def admins(self, request, slug=None):
+        try:
+            space = Space.objects.get(slug=slug)
+        except Space.DoesNotExist:
+            return Response({"detail": "Space not found."}, status=404)
+        queryset = space.admins.all()
+
+        search_term = request.query_params.get("search")
+        if search_term:
+            queryset = queryset.filter(
+                Q(first_name__icontains=search_term)
+                | Q(last_name__icontains=search_term)
+                | Q(email__icontains=search_term)
+            )
+
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = UserDetailSerializer(page, many=True, context={"request": request})
+            return self.get_paginated_response(serializer.data)
+
+        serializer = UserDetailSerializer(queryset, many=True, context={"request": request})
+        return Response(serializer.data)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="(?P<slug>[^/.]+)/pending_requests",
+        permission_classes=[IsAuthenticated],
+    )
+    def pending_requests(self, request, slug=None):
+        try:
+            space = Space.objects.get(slug=slug)
+        except Space.DoesNotExist:
+            return Response({"detail": "Space not found."}, status=404)
+        search_term = request.query_params.get("search", "").strip()
+        pending_requests = MembershipRequest.objects.filter(
+            space=space, request_type="request", status="pending"
+        ).select_related("user")
+        if search_term:
+            pending_requests = pending_requests.filter(
+                Q(user__first_name__icontains=search_term)
+                | Q(user__last_name__icontains=search_term)
+                | Q(user__email__icontains=search_term)
+            )
+
+        users = [req.user for req in pending_requests]
+        request_map = {req.user.id: req.id for req in pending_requests}
+
+        page = self.paginate_queryset(users)
+        serializer_context = self.get_serializer_context()
+        serializer_context["request_map"] = request_map
+        if page is not None:
+            serializer = UserDetailSerializer(page, many=True, context=serializer_context)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = UserDetailSerializer(users, many=True, context=serializer_context)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated], url_path="make-admin")
+    def make_admin(self, request, pk=None):
+        space = self.get_object()
+        user_id = request.data.get("user_id")
+        user = space.members.filter(id=user_id).first()
+        if not user:
+            return Response({"detail": "User is not a member of this space."}, status=400)
+
+        space.members.remove(user)
+        space.admins.add(user)
+
+        return Response({"detail": f"User {user_id} promoted to admin."}, status=200)
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated], url_path="make-member")
+    def make_member(self, request, pk=None):
+        space = self.get_object()
+        user_id = request.data.get("user_id")
+
+        user = space.admins.filter(id=user_id).first()
+        if not user:
+            return Response({"detail": "User is not an admin of this space."}, status=400)
+
+        space.admins.remove(user)
+        space.members.add(user)
+
+        return Response({"detail": f"User {user_id} demoted to member."}, status=200)
+
 
 class MembershipRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [MembershipRequestPermissions]
@@ -126,6 +238,30 @@ class MembershipRequestViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user, status="pending", request_type="request")
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated], url_path="accept")
+    def accept_request(self, request, pk=None):
+        try:
+            user_request = MembershipRequest.objects.get(pk=pk, request_type="request", status="pending")
+        except MembershipRequest.DoesNotExist:
+            return Response({"detail": "Request not found or already processed."}, status=status.HTTP_404_NOT_FOUND)
+        user_request.status = "approved"
+        user_request.save()
+        user_request.space.members.add(user_request.user)
+
+        return Response({"detail": "request accepted successfully."}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated], url_path="reject")
+    def reject_request(self, request, pk=None):
+        try:
+            user_request = MembershipRequest.objects.get(pk=pk, request_type="request", status="pending")
+        except MembershipRequest.DoesNotExist:
+            return Response({"detail": "Request not found or already processed."}, status=status.HTTP_404_NOT_FOUND)
+
+        user_request.status = "rejected"
+        user_request.save()
+
+        return Response({"detail": "Request rejected successfully."}, status=status.HTTP_200_OK)
 
 
 class MembershipInvitationViewSet(viewsets.ModelViewSet):
