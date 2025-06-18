@@ -9,6 +9,7 @@ from .models import ProfileColor, Experience, Gender, UserBadge, BadgeLevels
 from apps.users.utils import get_user_level
 from xloserver.constants import LEVEL_GROUPS
 
+
 class ProfileColorSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProfileColor
@@ -225,10 +226,13 @@ class UserDetailSerializer(serializers.ModelSerializer):
     profile_color_value = serializers.ReadOnlyField(source="profile_color.color")
     experience_value = serializers.ReadOnlyField(source="experience.experience")
     country_flag = serializers.SerializerMethodField()
+    profile_picture = serializers.SerializerMethodField()
+    request_id = serializers.SerializerMethodField()
 
     class Meta:
         model = get_user_model()
         fields = [
+            "id",
             "country",
             "gender",
             "first_name",
@@ -244,6 +248,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "profile_color_value",
             "country_flag",
             "experience_value",
+            "request_id",
         ]
 
     def get_birth_year(self, obj):
@@ -255,6 +260,16 @@ class UserDetailSerializer(serializers.ModelSerializer):
             flag_url = obj.country.flag
             return request.build_absolute_uri(flag_url)
         return None
+
+    def get_profile_picture(self, obj):
+        if obj.profile_picture:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.profile_picture.url)
+        return None
+
+    def get_request_id(self, obj):
+        request_map = self.context.get("request_map", {})
+        return request_map.get(obj.id)
 
 
 class PasswordResetSerializer(UserSerializer):
