@@ -98,7 +98,10 @@ class SpaceViewSet(viewsets.ModelViewSet):
         Retrieve the list of spaces where the user is either the owner or a member.
         """
         user = request.user
-        spaces = Space.objects.filter(Q(owner=user) | Q(members__in=[user])).distinct()
+        search = request.query_params.get("search")
+        spaces = Space.objects.filter(Q(owner=user) | Q(members__in=[user]) | Q(admins__in=[user])).distinct()
+        if search:
+            spaces = spaces.filter(name__icontains=search)
         serializer = SpaceDetailSerializer(spaces, many=True, context={"request": request})
         return Response(serializer.data)
 

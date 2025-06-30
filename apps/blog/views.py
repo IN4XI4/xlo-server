@@ -292,6 +292,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
             "language": story.language,
             "cards": [],
             "image": request.build_absolute_uri(story.image.url) if story.image else None,
+            "spaces": list(story.spaces.values_list("id", flat=True)),
         }
         for card in cards:
             blocks = Block.objects.filter(card=card).order_by("id")
@@ -328,6 +329,11 @@ class StoriesViewSet(viewsets.ModelViewSet):
     def create_story_full(self, request, *args, **kwargs):
         data = request.data
         data = clean_data(data)
+        spaces_str = data.get("spaces", "")
+        if spaces_str:
+            spaces_list = [int(x) for x in spaces_str.split(",") if x]
+        else:
+            spaces_list = []
         story_data = {
             "title": data.get("title"),
             "subtitle": data.get("subtitle"),
@@ -338,6 +344,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
             "identity_type": data.get("story_identities"),
             "is_private": data.get("is_private"),
             "free_access": data.get("free_access"),
+            "spaces": spaces_list,
         }
         story_serializer = StorySerializer(data=story_data)
         if story_serializer.is_valid():
@@ -387,7 +394,6 @@ class StoriesViewSet(viewsets.ModelViewSet):
                     return Response(block_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         # Send to interested users:
         send_new_stories_email.delay(story.topic.id)
-
         return Response(story_serializer.data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["put"], url_path="update-story-full")
@@ -399,6 +405,11 @@ class StoriesViewSet(viewsets.ModelViewSet):
 
         data = request.data
         data = clean_data(data)
+        spaces_str = data.get("spaces", "")
+        if spaces_str:
+            spaces_list = [int(x) for x in spaces_str.split(",") if x]
+        else:
+            spaces_list = []
         story_data = {
             "title": data.get("title"),
             "subtitle": data.get("subtitle"),
@@ -408,6 +419,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
             "identity_type": data.get("story_identities"),
             "difficulty_level": data.get("difficulty_level"),
             "language": data.get("language"),
+            "spaces": spaces_list,
         }
         if story.image and not request.FILES.get("image"):
             if not request.data.get("image"):
@@ -478,7 +490,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
                     if image_file:
                         block_data["image"] = image_file
                     elif not image_value:
-                        block.image = None 
+                        block.image = None
 
                     image_2_file = request.FILES.get(f"cards[{card_index}].blocks[{block_index}].image_2")
                     image_2_value = request.data.get(f"cards[{card_index}].blocks[{block_index}].image_2")
