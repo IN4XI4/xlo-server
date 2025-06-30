@@ -14,10 +14,14 @@ from .models import (
     Notification,
 )
 
+from apps.spaces.models import Space
 from apps.users.models import UserBadge, BadgeLevels
 from apps.users.serializers import UserBadgeSerializer
 
+
 class StorySerializer(serializers.ModelSerializer):
+    spaces = serializers.PrimaryKeyRelatedField(queryset=Space.objects.all(), many=True, required=False)
+
     class Meta:
         model = Story
         fields = [
@@ -34,6 +38,7 @@ class StorySerializer(serializers.ModelSerializer):
             "views_count",
             "slug",
             "free_access",
+            "spaces",
             "is_premium",
         ]
         read_only_fields = ["is_active", "created_time", "updated_time", "user"]
