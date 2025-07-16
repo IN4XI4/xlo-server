@@ -78,6 +78,7 @@ class SpaceDetailSerializer(serializers.ModelSerializer):
     is_admin = serializers.SerializerMethodField()
     members_count = serializers.SerializerMethodField()
     stories_count = serializers.SerializerMethodField()
+    category_ids = serializers.SerializerMethodField()
 
     class Meta:
         model = Space
@@ -98,6 +99,7 @@ class SpaceDetailSerializer(serializers.ModelSerializer):
             "is_admin",
             "members_count",
             "stories_count",
+            "category_ids",
         )
 
     def get_is_owner(self, obj):
@@ -118,6 +120,8 @@ class SpaceDetailSerializer(serializers.ModelSerializer):
     def get_stories_count(self, obj):
         return obj.stories.count()
 
+    def get_category_ids(self, obj):
+        return [category.id for category in obj.categories.all()]
 
 class MembershipRequestSerializer(serializers.ModelSerializer):
     class Meta:

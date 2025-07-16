@@ -17,8 +17,9 @@ from .serializers import (
     MembershipRequestInvitationSerializer,
     MembershipRequestUpdateSerializer,
 )
+
+from apps.base.models import TopicTag
 from apps.base.serializers import TopicTagSerializer
-from apps.users.models import CustomUser
 from apps.users.serializers import UserDetailSerializer
 
 
@@ -69,6 +70,20 @@ class SpaceViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+
+        categories_ids = self.request.data.get("categories", None)
+        if categories_ids is not None:
+            if not isinstance(categories_ids, list):
+                return Response(
+                    {"detail": "Categories must be a list of IDs."},
+                    status=400,
+                )
+            valid_categories = TopicTag.objects.filter(id__in=categories_ids)
+            instance.categories.set(valid_categories)
+        return instance
 
     @action(detail=True, methods=["get"], permission_classes=[IsAuthenticated])
     def categories(self, request, pk=None):
@@ -215,6 +230,33 @@ class SpaceViewSet(viewsets.ModelViewSet):
 
         return Response({"detail": f"User {user_id} demoted to member."}, status=200)
 
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated], url_path="leave")
+    def leave_space(self, request, pk=None):
+        space = self.get_object()
+        user = request.user
+
+        if space.owner == user:
+            return Response(
+                {"detail": "You cannot leave your own space. Transfer ownership or delete the space."},
+                status=400
+            )
+
+        if space.admins.filter(id=user.id).exists():
+            space.admins.remove(user)
+            return Response(
+                {"detail": "You have left the space."},
+                status=200
+            )
+        if space.members.filter(id=user.id).exists():
+            space.members.remove(user)
+            return Response(
+                {"detail": "You have left the space."},
+                status=200
+            )
+        return Response(
+            {"detail": "You are not a member of this space."},
+            status=400
+        )
 
 class MembershipRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [MembershipRequestPermissions]
