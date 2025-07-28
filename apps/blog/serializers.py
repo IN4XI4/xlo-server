@@ -36,6 +36,7 @@ class StorySerializer(serializers.ModelSerializer):
             "identity_type",
             "language",
             "difficulty_level",
+            "created_time",
             "updated_time",
             "edited_time",
             "views_count",
