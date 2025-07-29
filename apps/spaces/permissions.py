@@ -20,8 +20,10 @@ class SpacePermissions(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         if not request.user.is_authenticated:
             return False
-        if view.action == "leave_space":
+        if view.action in ["leave_space", "users_to_invite"]:
             return True
+        if view.action == "invite_multiple":
+            return obj.owner == request.user or obj.admins.filter(id=request.user.id).exists()
         if request.method in permissions.SAFE_METHODS:
             return True
 

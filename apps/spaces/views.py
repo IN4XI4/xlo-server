@@ -1,3 +1,5 @@
+import re
+
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status
@@ -17,8 +19,10 @@ from .serializers import (
     MembershipRequestInvitationSerializer,
     MembershipRequestUpdateSerializer,
 )
+from .tasks import send_space_invitation_email
 
 from apps.base.models import TopicTag
+from apps.users.models import CustomUser
 from apps.base.serializers import TopicTagSerializer
 from apps.users.serializers import UserDetailSerializer
 
@@ -237,25 +241,102 @@ class SpaceViewSet(viewsets.ModelViewSet):
 
         if space.owner == user:
             return Response(
-                {"detail": "You cannot leave your own space. Transfer ownership or delete the space."},
-                status=400
+                {"detail": "You cannot leave your own space. Transfer ownership or delete the space."}, status=400
             )
 
         if space.admins.filter(id=user.id).exists():
             space.admins.remove(user)
-            return Response(
-                {"detail": "You have left the space."},
-                status=200
-            )
+            return Response({"detail": "You have left the space."}, status=200)
         if space.members.filter(id=user.id).exists():
             space.members.remove(user)
-            return Response(
-                {"detail": "You have left the space."},
-                status=200
-            )
+            return Response({"detail": "You have left the space."}, status=200)
+        return Response({"detail": "You are not a member of this space."}, status=400)
+
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated], url_path="remove-user")
+    def remove_user(self, request, pk=None):
+        space = self.get_object()
+        current_user = request.user
+        user_id = request.data.get("user_id")
+        if not user_id:
+            return Response({"detail": "user_id is required."}, status=400)
+
+        target_user = space.members.filter(id=user_id).first() or space.admins.filter(id=user_id).first()
+        if not target_user:
+            return Response({"detail": "User is not part of this space."}, status=400)
+
+        if current_user == space.owner:
+            if target_user == space.owner:
+                return Response({"detail": "Owner cannot remove themselves."}, status=400)
+            space.admins.remove(target_user)
+            space.members.remove(target_user)
+            return Response({"detail": f"User {user_id} removed."}, status=200)
+
+        if space.admins.filter(id=current_user.id).exists():
+            if target_user == space.owner or space.admins.filter(id=user_id).exists():
+                return Response({"detail": "Admins cannot remove other admins or the owner."}, status=403)
+            space.members.remove(target_user)
+            return Response({"detail": f"Member {user_id} removed."}, status=200)
+
+        return Response({"detail": "You do not have permission to remove this user."}, status=403)
+
+    @action(detail=True, methods=["get"], url_path="users-to-invite", permission_classes=[IsAuthenticated])
+    def users_to_invite(self, request, pk=None):
+        space = self.get_object()
+
+        excluded_ids = [space.owner_id]
+        excluded_ids += list(space.admins.values_list("id", flat=True))
+        excluded_ids += list(space.members.values_list("id", flat=True))
+        pending_ids = MembershipRequest.objects.filter(space=space, status="pending").values_list("user_id", flat=True)
+        excluded_ids += list(pending_ids)
+
+        queryset = CustomUser.objects.exclude(id__in=excluded_ids)
+        search = request.query_params.get("search", "").strip()
+        if search:
+            queryset = queryset.filter(Q(first_name__icontains=search) | Q(last_name__icontains=search))
+
+        page = self.paginate_queryset(queryset)
+        serializer = UserDetailSerializer(page, many=True, context={"request": request})
+        return self.get_paginated_response(serializer.data)
+
+    @action(detail=True, methods=["post"], url_path="invite-multiple")
+    def invite_multiple(self, request, pk=None):
+        space = self.get_object()
+        user_ids = request.data.get("user_ids", [])
+
+        for uid in user_ids:
+            if space.members.filter(id=uid).exists():
+                continue
+            if space.admins.filter(id=uid).exists():
+                continue
+
+            if MembershipRequest.objects.filter(
+                space=space, user_id=uid, request_type="invite", status="pending"
+            ).exists():
+                continue
+            MembershipRequest.objects.create(space=space, user_id=uid, request_type="invite", status="pending")
+
+        return Response({"detail": "Invitations sent successfully."}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"], url_path="invite-emails", permission_classes=[IsAuthenticated])
+    def invite_emails(self, request, pk=None):
+        space = self.get_object()
+        emails = request.data.get("emails", [])
+
+        if not isinstance(emails, list) or not emails:
+            return Response({"detail": "emails must be a non-empty list."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validar correos
+        email_regex = re.compile(r"[^@]+@[^@]+\.[^@]+")
+        valid_emails = [email for email in emails if email_regex.match(email)]
+
+        if not valid_emails:
+            return Response({"detail": "No valid emails provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        send_space_invitation_email.delay(valid_emails, space.name, space.slug)
+
         return Response(
-            {"detail": "You are not a member of this space."},
-            status=400
+            {"detail": f"Invitation emails are being sent to {len(valid_emails)} recipients."},
+            status=status.HTTP_200_OK,
         )
 
 class MembershipRequestViewSet(viewsets.ModelViewSet):
