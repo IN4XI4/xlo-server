@@ -30,6 +30,7 @@ class StorySerializer(serializers.ModelSerializer):
             "topic",
             "title",
             "subtitle",
+            "image",
             "is_active",
             "is_private",
             "life_moment",

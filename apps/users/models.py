@@ -1,4 +1,5 @@
 import os
+import random
 
 from django.db import models
 from django.conf import settings
@@ -8,6 +9,8 @@ from django.contrib.auth.models import AbstractUser, UserManager
 from rest_framework.authtoken.models import Token
 from django_countries.fields import CountryField
 
+from apps.avatar.items.item_colors import COLORS
+from apps.avatar.items.skin_colors import SKIN_COLORS
 
 class MrvUserManager(UserManager):
     def create_superuser(self, email, password, **extra_fields):
@@ -92,6 +95,57 @@ def create_mentor_for_new_user(sender, instance, created, **kwargs):
         from apps.base.models import Mentor
 
         Mentor.objects.create(user=instance, created_by=instance)
+
+@receiver(post_save, sender=CustomUser)
+def create_user_avatar(sender, instance, created, **kwargs):    
+    if created:
+        from apps.avatar.models import (
+        Avatar,
+        UserUnlockedItem,
+        UserUnlockedColor,
+        UserUnlockedSkinColor,
+        UserUnlockedEyesColor,
+    )
+
+        face_item = UserUnlockedItem.objects.create(user=instance, item_code="BOY_FACE_1", item_type="FACE")
+        hair_item = UserUnlockedItem.objects.create(user=instance, item_code="BOY_HAIR_1", item_type="HAIR")
+        shirt_item = UserUnlockedItem.objects.create(user=instance, item_code="BOY_SHIRT_1", item_type="SHIRT")
+        pants_item = UserUnlockedItem.objects.create(user=instance, item_code="BOY_PANT_1", item_type="PANTS")
+        shoes_item = UserUnlockedItem.objects.create(user=instance, item_code="BOY_SHOE_1", item_type="SHOES")
+
+        UserUnlockedItem.objects.create(user=instance, item_code="GIRL_FACE_1", item_type="FACE")
+        UserUnlockedItem.objects.create(user=instance, item_code="GIRL_HAIR_1", item_type="HAIR")
+        UserUnlockedItem.objects.create(user=instance, item_code="GIRL_SHIRT_1", item_type="SHIRT")
+        UserUnlockedItem.objects.create(user=instance, item_code="GIRL_PANT_1", item_type="PANTS")
+        UserUnlockedItem.objects.create(user=instance, item_code="GIRL_SHOE_1", item_type="SHOES")
+
+        color = UserUnlockedColor.objects.create(user=instance, color_code="BLACK")
+        skin_color = UserUnlockedSkinColor.objects.create(user=instance, color_code="SKIN_LIGHT")
+        eyes_color = UserUnlockedEyesColor.objects.create(user=instance, color_code="BLACK")
+
+        skin_options = [k for k in SKIN_COLORS.keys() if k != "SKIN_LIGHT"]
+        color_options = [k for k in COLORS.keys() if k != "BLACK"]
+
+        random_skin = random.choice(skin_options)
+        random_color = random.choice(color_options)
+
+        UserUnlockedSkinColor.objects.create(user=instance, color_code=random_skin)
+        UserUnlockedColor.objects.create(user=instance, color_code=random_color)
+
+        Avatar.objects.create(
+            user=instance,
+            face_item=face_item,
+            hair_item=hair_item,
+            hair_color=color,
+            shirt_item=shirt_item,
+            shirt_color=color,
+            pants_item=pants_item,
+            pants_color=color,
+            shoes_item=shoes_item,
+            shoes_color=color,
+            eyes_color=eyes_color,
+            skin_color=skin_color,
+        )
 
 
 class BadgeTypes(models.TextChoices):

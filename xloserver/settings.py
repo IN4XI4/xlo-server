@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "django_countries",
     "django_filters",
     "django_celery_beat",
+    "apps.avatar",
     "apps.base",
     "apps.blog",
     "apps.users",
