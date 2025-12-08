@@ -126,7 +126,7 @@ class Card(models.Model):
     story = models.ForeignKey(Story, on_delete=models.CASCADE)
     soft_skill = models.ForeignKey(SoftSkill, on_delete=models.SET_NULL, blank=True, null=True)
     mentor = models.ForeignKey(Mentor, on_delete=models.SET_NULL, blank=True, null=True)
-    title = models.CharField(max_length=300)
+    title = models.CharField(max_length=300, null=True, blank=True)
     allow_comments = models.BooleanField(default=True)
     created_time = models.DateField(auto_now=False, auto_now_add=True)
     updated_time = models.DateField(auto_now=True)
