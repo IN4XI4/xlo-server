@@ -161,6 +161,7 @@ class Block(models.Model):
         (11, "TESTIMONIAL"),
         (12, "REFLECTION"),
         (13, "ILLUSTRATION"),
+        (14, "MULTICHOICE"),
     ]
 
     card = models.ForeignKey(Card, on_delete=models.CASCADE)
