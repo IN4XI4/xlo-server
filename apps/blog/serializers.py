@@ -244,6 +244,18 @@ class BlockSerializer(serializers.ModelSerializer):
 
             if not isinstance(correct_answers, list) or not isinstance(incorrect_answers, list):
                 raise serializers.ValidationError("Correct and incorrect answers must be lists.")
+        elif data.get("block_class") == 14:  # Type "MULTI CHOICE QUESTION"
+            options = data.get("options", [])
+            correct_answers = options.get("correct_answers", [])
+            incorrect_answers = options.get("incorrect_answers", [])
+
+            if not correct_answers or len(correct_answers) < 2:
+                raise serializers.ValidationError("A Multi choice question block must have at least two correct answers.")
+            if not incorrect_answers:
+                raise serializers.ValidationError("A question block must have at least one incorrect answer.")
+
+            if not isinstance(correct_answers, list) or not isinstance(incorrect_answers, list):
+                raise serializers.ValidationError("Correct and incorrect answers must be lists.")
         return data
 
 
