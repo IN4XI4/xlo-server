@@ -69,6 +69,9 @@ INSTALLED_APPS = [
     "apps.blog",
     "apps.users",
     "apps.spaces",
+    "apps.assessments",
+    "apps.attempts",
+
 ]
 
 MIDDLEWARE = [

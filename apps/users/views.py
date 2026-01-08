@@ -18,9 +18,9 @@ from rest_framework.views import APIView
 
 from apps.blog.models import Like, Story, Comment, UserStoryView
 
-from .models import CustomUser, ProfileColor, Experience, Gender, UserBadge
-from .permissions import UserPermissions
-from .serializers import (
+from apps.users.models import CustomUser, ProfileColor, Experience, Gender, UserBadge, Follow
+from apps.users.permissions import UserPermissions, FollowPermissions
+from apps.users.serializers import (
     UserSerializer,
     PasswordResetSerializer,
     UserMeSerializer,
@@ -31,6 +31,7 @@ from .serializers import (
     GenderSerializer,
     UserDetailSerializer,
     UserBadgeSerializer,
+    FollowSerializer,
 )
 
 
@@ -321,3 +322,20 @@ class UserBadgeViewSet(viewsets.ModelViewSet):
             {"message": "No new badges were added."},
             status=status.HTTP_200_OK,
         )
+
+
+class FollowViewSet(viewsets.ModelViewSet):
+    serializer_class = FollowSerializer
+    permission_classes = [FollowPermissions]
+    http_method_names = ["get", "post", "delete", "head", "options"]
+    filterset_fields = {
+        "follower": ("exact", "in"),
+        "followed": ("exact", "in"),
+        "created_at": ("exact", "gte", "lte"),
+    }
+
+    def get_queryset(self):
+        return Follow.objects.filter(follower__is_active=True, followed__is_active=True)
+
+    def perform_create(self, serializer):
+        serializer.save(follower=self.request.user)

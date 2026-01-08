@@ -12,6 +12,7 @@ from django_countries.fields import CountryField
 from apps.avatar.items.item_colors import COLORS
 from apps.avatar.items.skin_colors import SKIN_COLORS
 
+
 class MrvUserManager(UserManager):
     def create_superuser(self, email, password, **extra_fields):
         extra_fields.setdefault("is_staff", True)
@@ -77,6 +78,9 @@ class CustomUser(AbstractUser):
     email_reply = models.BooleanField(default=True)  # Everytime someone liked or replied your comment
     email_info = models.BooleanField(default=True)  # The admin is allowed to send emails anytime
 
+    average_score = models.FloatField(default=0)
+    points = models.IntegerField(default=0)
+
     USERNAME_FIELD = "email"
     EMAIL_FIELD = "email"
     REQUIRED_FIELDS = []
@@ -96,16 +100,17 @@ def create_mentor_for_new_user(sender, instance, created, **kwargs):
 
         Mentor.objects.create(user=instance, created_by=instance)
 
+
 @receiver(post_save, sender=CustomUser)
-def create_user_avatar(sender, instance, created, **kwargs):    
+def create_user_avatar(sender, instance, created, **kwargs):
     if created:
         from apps.avatar.models import (
-        Avatar,
-        UserUnlockedItem,
-        UserUnlockedColor,
-        UserUnlockedSkinColor,
-        UserUnlockedEyesColor,
-    )
+            Avatar,
+            UserUnlockedItem,
+            UserUnlockedColor,
+            UserUnlockedSkinColor,
+            UserUnlockedEyesColor,
+        )
 
         face_item = UserUnlockedItem.objects.create(user=instance, item_code="BOY_FACE_1", item_type="FACE")
         hair_item = UserUnlockedItem.objects.create(user=instance, item_code="BOY_HAIR_1", item_type="HAIR")
@@ -188,3 +193,16 @@ class UserBadge(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.get_badge_type_display()} ({self.level})"
+
+
+class Follow(models.Model):
+    follower = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="following")
+    followed = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="followers")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("follower", "followed")
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.follower} -> {self.followed}"
