@@ -58,10 +58,11 @@ class Story(models.Model):
         (2, "Aged 10 to 15"),
         (3, "Aged 15 to 20"),
         (4, "Aged 20 to 30"),
-        (5, "Aged 40 to 50"),
-        (6, "Aged 50 to 60"),
-        (7, "Aged 60 to 70"),
-        (8, "Aged 70 and more"),
+        (5, "Aged 30 to 40"),
+        (6, "Aged 40 to 50"),
+        (7, "Aged 50 to 60"),
+        (8, "Aged 60 to 70"),
+        (9, "Aged 70 and more"),
     ]
 
     IDENTITY_CHOICES = [
