@@ -295,7 +295,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
             "spaces": list(story.spaces.values_list("id", flat=True)),
         }
         for card in cards:
-            blocks = Block.objects.filter(card=card).order_by("id")
+            blocks = Block.objects.filter(card=card).order_by("order", "id")
             blocks_data = [
                 {
                     "id": block.id,
@@ -381,6 +381,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
                     "block_color": request.data.get(f"cards[{card_index}].blocks[{block_index}].block_color"),
                     "content_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].content_class"),
                     "title": request.data.get(f"cards[{card_index}].blocks[{block_index}].title"),
+                    "order": request.data.get(f"cards[{card_index}].blocks[{block_index}].order"),
                     "options": safe_json_loads(request.data.get(f"cards[{card_index}].blocks[{block_index}].options")),
                 }
                 if f"cards[{card_index}].blocks[{block_index}].image" in request.FILES:
@@ -480,6 +481,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
                 "block_color": request.data.get(f"cards[{card_index}].blocks[{block_index}].block_color"),
                 "content_class": request.data.get(f"cards[{card_index}].blocks[{block_index}].content_class"),
                 "title": request.data.get(f"cards[{card_index}].blocks[{block_index}].title"),
+                "order": request.data.get(f"cards[{card_index}].blocks[{block_index}].order"),
                 "options": safe_json_loads(request.data.get(f"cards[{card_index}].blocks[{block_index}].options")),
             }
             if block_id:
