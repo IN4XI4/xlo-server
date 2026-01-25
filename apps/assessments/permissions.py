@@ -1,0 +1,63 @@
+from rest_framework import permissions
+
+from apps.assessments.models import Question, Choice
+
+
+class AssessmentPermissions(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        if request.method == "POST":
+            return request.user.is_authenticated
+        # TODO: Creator level 4 users are the only ones able to create assessments.
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        return obj.user == request.user
+
+
+class QuestionChoicePermissions(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if view.action == "create":
+            return request.user.is_authenticated
+
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        if isinstance(obj, Question):
+            owner = obj.assessment.user
+        elif isinstance(obj, Choice):
+            owner = obj.question.assessment.user
+        else:
+            return False
+        return owner == request.user
+
+
+class AssessmentDifficultyRatingPermissions(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if view.action == "create":
+            return request.user.is_authenticated
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        if view.action in ["update", "partial_update", "destroy"]:
+            return obj.user == request.user
+        return True
+
+
+class FollowAssessmentPermissions(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method == "POST":
+            return request.user.is_authenticated
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        if request.method == "DELETE":
+            return obj.follower == request.user
+        return False

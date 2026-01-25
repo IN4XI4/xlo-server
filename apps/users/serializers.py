@@ -5,7 +5,7 @@ from django.utils.timezone import now
 from rest_framework import serializers
 
 from apps.blog.models import Like, Story, Comment, UserStoryView
-from .models import ProfileColor, Experience, Gender, UserBadge, BadgeLevels
+from apps.users.models import ProfileColor, Experience, Gender, UserBadge, BadgeLevels, Follow
 from apps.users.utils import get_user_level
 from xloserver.constants import LEVEL_GROUPS
 
@@ -135,6 +135,39 @@ class CompleteUserSerializer(serializers.ModelSerializer):
     def get_user_level_display(self, obj):
         numeric_level, level_name = get_user_level(obj)
         return {"level_value": numeric_level, "level_name": level_name}
+
+
+class ReadOnlyUserSerializer(serializers.ModelSerializer):
+    picture = serializers.SerializerMethodField()
+    country = CountryField(name_only=True)
+    country_flag = serializers.SerializerMethodField()
+
+    class Meta:
+        model = get_user_model()
+        fields = [
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "country",
+            "country_flag",
+            "points",
+            "average_score",
+            "picture",
+        ]
+
+    def get_picture(self, obj):
+        if obj.profile_picture:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.profile_picture.url)
+        return None
+    
+    def get_country_flag(self, obj):
+        request = self.context.get("request")
+        if obj.country and request:
+            flag_url = obj.country.flag
+            return request.build_absolute_uri(flag_url)
+        return None
 
 
 class UserBadgeInfoSerializer(serializers.ModelSerializer):
@@ -286,3 +319,40 @@ class UserBadgeSerializer(serializers.ModelSerializer):
 
     def get_level_colors(self, obj):
         return BadgeLevels.get_colors(obj.level)
+
+
+class FollowSerializer(serializers.ModelSerializer):
+    follower_username = serializers.ReadOnlyField(source="follower.username")
+    followed_username = serializers.ReadOnlyField(source="followed.username")
+    follower_first_name = serializers.ReadOnlyField(source="follower.first_name")
+    followed_first_name = serializers.ReadOnlyField(source="followed.first_name")
+    follower_last_name = serializers.ReadOnlyField(source="follower.last_name")
+    followed_last_name = serializers.ReadOnlyField(source="followed.last_name")
+    follower_profile_picture = serializers.SerializerMethodField()
+    followed_profile_picture = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Follow
+        fields = "__all__"
+        read_only_fields = ["follower", "created_at"]
+
+    def validate(self, data):
+        user = self.context["request"].user
+        if "followed" in data:
+            if data["followed"] == user:
+                raise serializers.ValidationError("A user cannot follow themselves.")
+        else:
+            raise serializers.ValidationError("'followed' field is required.")
+        return data
+
+    def get_follower_profile_picture(self, obj):
+        if obj.follower.profile_picture:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.follower.profile_picture.url)
+        return None
+
+    def get_followed_profile_picture(self, obj):
+        if obj.followed.profile_picture:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.followed.profile_picture.url)
+        return None

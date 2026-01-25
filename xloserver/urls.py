@@ -29,4 +29,6 @@ urlpatterns = [
     path("users/", include("apps.users.urls", namespace="users")),
     path("spaces/", include("apps.spaces.urls", namespace="spaces")),
     path("avatar/", include("apps.avatar.urls", namespace="avatar")),
+    path("assessments/", include("apps.assessments.urls", namespace="assessments")),
+    path("attempts/", include("apps.attempts.urls", namespace="attempts")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
