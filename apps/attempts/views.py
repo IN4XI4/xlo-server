@@ -98,6 +98,7 @@ class AttemptViewSet(viewsets.ModelViewSet):
 
     def calculate_points(self, assessment, score):
         """Helper function to calculate points based on the formula."""
+        # TODO: FIX this formula, count how many users have rated the assessment
         D_teacher = assessment.difficulty
         D_students = assessment.user_difficulty_rating or D_teacher
         return score * ((D_teacher + D_students) / 20.0)

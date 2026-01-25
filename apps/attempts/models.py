@@ -43,4 +43,4 @@ class UserPoints(models.Model):
         verbose_name_plural = "User Points"
 
     def __str__(self):
-        return f"{self.user.email} - {self.category.name} - {self.total_points} points"
+        return f"{self.user.email} - {self.category.title} - {self.total_points} points"

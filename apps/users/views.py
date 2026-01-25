@@ -22,6 +22,7 @@ from apps.users.models import CustomUser, ProfileColor, Experience, Gender, User
 from apps.users.permissions import UserPermissions, FollowPermissions
 from apps.users.serializers import (
     UserSerializer,
+    ReadOnlyUserSerializer,
     PasswordResetSerializer,
     UserMeSerializer,
     CompleteUserSerializer,
@@ -197,6 +198,17 @@ class UserViewSet(viewsets.ModelViewSet):
         user.save()
 
         return Response({"message": "Password updated successfully."})
+
+
+class ReadOnlyUserViewSet(viewsets.ModelViewSet):
+    serializer_class = ReadOnlyUserSerializer
+    queryset = CustomUser.objects.all()
+    filterset_fields = {
+        "username": ("exact", "in", "icontains"),
+        "average_score": ("exact", "gte", "lte"),
+        "points": ("exact", "gte", "lte"),
+    }
+    ordering_fields = ["points", "average_score"]
 
 
 class UserBadgeViewSet(viewsets.ModelViewSet):

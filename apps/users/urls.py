@@ -9,6 +9,7 @@ from apps.users.views import (
     CountryListView,
     UserBadgeViewSet,
     FollowViewSet,
+    ReadOnlyUserViewSet,
 )
 
 app_name = "users"
@@ -19,6 +20,7 @@ router.register(r"profile_colors", ProfileColorViewSet, basename="profile_colors
 router.register(r"experience", ExperienceViewSet, basename="experience")
 router.register(r"genders", GenderViewSet, basename="genders")
 router.register(r"user-badges", UserBadgeViewSet, basename="user_badges")
+router.register(r"topusers", ReadOnlyUserViewSet, basename="topusers")
 router.register(r"follows", FollowViewSet, basename="follows")
 
 urlpatterns = [

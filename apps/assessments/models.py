@@ -54,6 +54,7 @@ class Assessment(models.Model):
     number_of_questions = models.PositiveIntegerField(
         default=10, validators=[MinValueValidator(5), MaxValueValidator(50)]
     )
+    # TODO: Attach to a story.
     allowed_attempts = models.PositiveIntegerField(default=2, validators=[MinValueValidator(2), MaxValueValidator(10)])
     time_limit = models.PositiveIntegerField(default=20, validators=[MinValueValidator(1), MaxValueValidator(120)])
     difficulty = models.FloatField(default=5.0, validators=[MinValueValidator(1.0), MaxValueValidator(10.0)])

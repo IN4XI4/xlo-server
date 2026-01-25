@@ -22,13 +22,22 @@ class QuestionAttemptSerializer(serializers.ModelSerializer):
         read_only_fields = ("is_correct",)
 
 
-
 class UserPointsSerializer(serializers.ModelSerializer):
-    country_display = serializers.SerializerMethodField()
+    country = serializers.SerializerMethodField()
+    country_flag = serializers.SerializerMethodField()
+    first_name = serializers.ReadOnlyField(source="user.first_name")
+    last_name = serializers.ReadOnlyField(source="user.last_name")
 
     class Meta:
         model = UserPoints
         fields = "__all__"
 
-    def get_country_display(self, obj):
+    def get_country(self, obj):
         return obj.user.country.name
+
+    def get_country_flag(self, obj):
+        request = self.context.get("request")
+        if obj.user.country and request:
+            flag_url = obj.user.country.flag
+            return request.build_absolute_uri(flag_url)
+        return None

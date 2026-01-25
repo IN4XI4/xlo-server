@@ -137,6 +137,39 @@ class CompleteUserSerializer(serializers.ModelSerializer):
         return {"level_value": numeric_level, "level_name": level_name}
 
 
+class ReadOnlyUserSerializer(serializers.ModelSerializer):
+    picture = serializers.SerializerMethodField()
+    country = CountryField(name_only=True)
+    country_flag = serializers.SerializerMethodField()
+
+    class Meta:
+        model = get_user_model()
+        fields = [
+            "id",
+            "username",
+            "first_name",
+            "last_name",
+            "country",
+            "country_flag",
+            "points",
+            "average_score",
+            "picture",
+        ]
+
+    def get_picture(self, obj):
+        if obj.profile_picture:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.profile_picture.url)
+        return None
+    
+    def get_country_flag(self, obj):
+        request = self.context.get("request")
+        if obj.country and request:
+            flag_url = obj.country.flag
+            return request.build_absolute_uri(flag_url)
+        return None
+
+
 class UserBadgeInfoSerializer(serializers.ModelSerializer):
     next_badge_levels = serializers.SerializerMethodField()
 
