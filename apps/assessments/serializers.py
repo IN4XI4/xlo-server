@@ -6,6 +6,8 @@ from apps.attempts.models import Attempt
 
 class AssessmentSerializer(serializers.ModelSerializer):
     user_username = serializers.ReadOnlyField(source="user.username")
+    user_first_name = serializers.ReadOnlyField(source="user.first_name")
+    user_last_name = serializers.ReadOnlyField(source="user.last_name")
     topic_name = serializers.ReadOnlyField(source="topic.title")
     topic_image = serializers.ImageField(source="topic.image", required=False, allow_null=True, use_url=True)
 
@@ -25,6 +27,8 @@ class AssessmentSerializer(serializers.ModelSerializer):
 
 class AssessmentDetailSerializer(serializers.ModelSerializer):
     user_username = serializers.ReadOnlyField(source="user.username")
+    user_first_name = serializers.ReadOnlyField(source="user.first_name")
+    user_last_name = serializers.ReadOnlyField(source="user.last_name")
     topic_name = serializers.ReadOnlyField(source="topic.title")
     category_name = serializers.ReadOnlyField(source="topic.tag.name")
     followers_count = serializers.SerializerMethodField()
