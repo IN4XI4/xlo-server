@@ -5,23 +5,23 @@ from apps.avatar.models import Avatar, UserUnlockedItem, UserUnlockedColor, User
 
 @admin.register(UserUnlockedItem)
 class UserUnlockedItemAdmin(admin.ModelAdmin):
-    list_display = ("user", "item_code", "item_type", "unlocked_at")
-    list_filter = ("item_type", "item_code")
-    search_fields = ("user__username", "user__email", "item_code")
+    list_display = ("user", "catalog_item", "unlocked_at")
+    list_filter = ("catalog_item",)
+    search_fields = ("user__username", "user__email", "catalog_item__name")
     list_per_page = 100
 
 
 @admin.register(UserUnlockedColor)
 class UserUnlockedColorAdmin(admin.ModelAdmin):
-    list_display = ("user", "color_code", "unlocked_at")
-    search_fields = ("user__username", "user__email", "color_code")
+    list_display = ("user", "catalog_item", "unlocked_at")
+    search_fields = ("user__username", "user__email", "catalog_item")
     list_per_page = 100
 
 
 @admin.register(UserUnlockedSkinColor)
 class UserUnlockedSkinColorAdmin(admin.ModelAdmin):
-    list_display = ("user", "color_code", "unlocked_at")
-    search_fields = ("user__username", "user__email", "color_code")
+    list_display = ("user", "catalog_item", "unlocked_at")
+    search_fields = ("user__username", "user__email", "catalog_item")
     list_per_page = 100
 
 

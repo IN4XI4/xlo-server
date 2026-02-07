@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     "apps.spaces",
     "apps.assessments",
     "apps.attempts",
+    "apps.wallet",
 
 ]
 

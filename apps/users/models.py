@@ -78,6 +78,8 @@ class CustomUser(AbstractUser):
     email_reply = models.BooleanField(default=True)  # Everytime someone liked or replied your comment
     email_info = models.BooleanField(default=True)  # The admin is allowed to send emails anytime
 
+    coin_balance = models.IntegerField(default=0)
+    coin_last_updated_at = models.DateTimeField(auto_now_add=True)
     average_score = models.FloatField(default=0)
     points = models.IntegerField(default=0)
 
