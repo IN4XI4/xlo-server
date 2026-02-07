@@ -85,7 +85,7 @@ class StoriesPagination(PageNumberPagination):
 
 
 class BlocksPagination(PageNumberPagination):
-    page_size = 50
+    page_size = 200
 
 
 class NotificationsPagination(PageNumberPagination):
