@@ -484,21 +484,21 @@ class StoriesViewSet(viewsets.ModelViewSet):
                 "order": request.data.get(f"cards[{card_index}].blocks[{block_index}].order"),
                 "options": safe_json_loads(request.data.get(f"cards[{card_index}].blocks[{block_index}].options")),
             }
+            image_file = request.FILES.get(f"cards[{card_index}].blocks[{block_index}].image")
+            image_2_file = request.FILES.get(f"cards[{card_index}].blocks[{block_index}].image_2")
+            if image_file:
+                block_data["image"] = image_file
+            if image_2_file:
+                block_data["image_2"] = image_2_file
             if block_id:
                 try:
                     block = Block.objects.get(id=block_id, card=card)
-                    image_file = request.FILES.get(f"cards[{card_index}].blocks[{block_index}].image")
                     image_value = request.data.get(f"cards[{card_index}].blocks[{block_index}].image")
-                    if image_file:
-                        block_data["image"] = image_file
-                    elif not image_value:
+                    if not image_file and not image_value:
                         block.image = None
 
-                    image_2_file = request.FILES.get(f"cards[{card_index}].blocks[{block_index}].image_2")
                     image_2_value = request.data.get(f"cards[{card_index}].blocks[{block_index}].image_2")
-                    if image_2_file:
-                        block_data["image_2"] = image_2_file
-                    elif not image_2_value:
+                    if not image_2_file and not image_2_value:
                         block.image_2 = None
 
                     block_serializer = BlockSerializer(block, data=block_data, partial=True)
