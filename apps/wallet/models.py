@@ -6,7 +6,6 @@ from django.core.validators import MinValueValidator
 from apps.users.models import CustomUser
 
 
-# Create your models here.
 class CoinPackage(models.Model):
     name = models.CharField(max_length=80)
     coins = models.PositiveIntegerField()
@@ -26,7 +25,6 @@ class CoinLedgerEntry(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     reference_id = models.CharField(max_length=100)
 
-    # idempotencia: evita duplicar movimientos por reintentos de webhooks
     idempotency_key = models.CharField(max_length=120, unique=True)
 
     class Meta:

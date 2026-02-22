@@ -65,7 +65,7 @@ class UserUnlockedItem(models.Model):
         unique_together = ("user", "catalog_item")
 
     def __str__(self):
-        return f"{self.item_code}"
+        return f"{self.catalog_item.item_type}"
 
 
 class UserUnlockedColor(models.Model):

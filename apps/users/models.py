@@ -1,5 +1,4 @@
 import os
-import random
 
 from django.db import models
 from django.conf import settings
@@ -8,9 +7,6 @@ from django.db.models.signals import post_save
 from django.contrib.auth.models import AbstractUser, UserManager
 from rest_framework.authtoken.models import Token
 from django_countries.fields import CountryField
-
-from apps.avatar.items.item_colors import COLORS
-from apps.avatar.items.skin_colors import SKIN_COLORS
 
 
 class MrvUserManager(UserManager):
@@ -79,7 +75,7 @@ class CustomUser(AbstractUser):
     email_info = models.BooleanField(default=True)  # The admin is allowed to send emails anytime
 
     coin_balance = models.IntegerField(default=0)
-    coin_last_updated_at = models.DateTimeField(auto_now_add=True)
+    coin_last_updated_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     average_score = models.FloatField(default=0)
     points = models.IntegerField(default=0)
 
@@ -108,36 +104,56 @@ def create_user_avatar(sender, instance, created, **kwargs):
     if created:
         from apps.avatar.models import (
             Avatar,
+            AvatarItemCatalog,
+            AvatarColorCatalog,
+            AvatarSkinColorCatalog,
             UserUnlockedItem,
             UserUnlockedColor,
             UserUnlockedSkinColor,
             UserUnlockedEyesColor,
         )
 
-        face_item = UserUnlockedItem.objects.create(user=instance, item_code="BOY_FACE_1", item_type="FACE")
-        hair_item = UserUnlockedItem.objects.create(user=instance, item_code="BOY_HAIR_1", item_type="HAIR")
-        shirt_item = UserUnlockedItem.objects.create(user=instance, item_code="BOY_SHIRT_1", item_type="SHIRT")
-        pants_item = UserUnlockedItem.objects.create(user=instance, item_code="BOY_PANT_1", item_type="PANTS")
-        shoes_item = UserUnlockedItem.objects.create(user=instance, item_code="BOY_SHOE_1", item_type="SHOES")
+        # Boy items
+        face_item = UserUnlockedItem.objects.create(
+            user=instance, catalog_item=AvatarItemCatalog.objects.get(code="BOY_FACE_1")
+        )
+        hair_item = UserUnlockedItem.objects.create(
+            user=instance, catalog_item=AvatarItemCatalog.objects.get(code="BOY_HAIR_1")
+        )
+        shirt_item = UserUnlockedItem.objects.create(
+            user=instance, catalog_item=AvatarItemCatalog.objects.get(code="BOY_SHIRT_1")
+        )
+        pants_item = UserUnlockedItem.objects.create(
+            user=instance, catalog_item=AvatarItemCatalog.objects.get(code="BOY_PANT_1")
+        )
+        shoes_item = UserUnlockedItem.objects.create(
+            user=instance, catalog_item=AvatarItemCatalog.objects.get(code="BOY_SHOE_1")
+        )
 
-        UserUnlockedItem.objects.create(user=instance, item_code="GIRL_FACE_1", item_type="FACE")
-        UserUnlockedItem.objects.create(user=instance, item_code="GIRL_HAIR_1", item_type="HAIR")
-        UserUnlockedItem.objects.create(user=instance, item_code="GIRL_SHIRT_1", item_type="SHIRT")
-        UserUnlockedItem.objects.create(user=instance, item_code="GIRL_PANT_1", item_type="PANTS")
-        UserUnlockedItem.objects.create(user=instance, item_code="GIRL_SHOE_1", item_type="SHOES")
+        # Girl items
+        UserUnlockedItem.objects.create(user=instance, catalog_item=AvatarItemCatalog.objects.get(code="GIRL_FACE_1"))
+        UserUnlockedItem.objects.create(user=instance, catalog_item=AvatarItemCatalog.objects.get(code="GIRL_HAIR_1"))
+        UserUnlockedItem.objects.create(user=instance, catalog_item=AvatarItemCatalog.objects.get(code="GIRL_SHIRT_1"))
+        UserUnlockedItem.objects.create(user=instance, catalog_item=AvatarItemCatalog.objects.get(code="GIRL_PANT_1"))
+        UserUnlockedItem.objects.create(user=instance, catalog_item=AvatarItemCatalog.objects.get(code="GIRL_SHOE_1"))
 
-        color = UserUnlockedColor.objects.create(user=instance, color_code="BLACK")
-        skin_color = UserUnlockedSkinColor.objects.create(user=instance, color_code="SKIN_LIGHT")
+        # Colors
+        color = UserUnlockedColor.objects.create(
+            user=instance, catalog_item=AvatarColorCatalog.objects.get(code="BLACK")
+        )
+        skin_color = UserUnlockedSkinColor.objects.create(
+            user=instance, catalog_item=AvatarSkinColorCatalog.objects.get(code="SKIN_LIGHT")
+        )
         eyes_color = UserUnlockedEyesColor.objects.create(user=instance, color_code="BLACK")
 
-        skin_options = [k for k in SKIN_COLORS.keys() if k != "SKIN_LIGHT"]
-        color_options = [k for k in COLORS.keys() if k != "BLACK"]
+        # Random bonus unlocks
+        random_skin = AvatarSkinColorCatalog.objects.exclude(code="SKIN_LIGHT").order_by("?").first()
+        random_color = AvatarColorCatalog.objects.exclude(code="BLACK").order_by("?").first()
 
-        random_skin = random.choice(skin_options)
-        random_color = random.choice(color_options)
-
-        UserUnlockedSkinColor.objects.create(user=instance, color_code=random_skin)
-        UserUnlockedColor.objects.create(user=instance, color_code=random_color)
+        if random_skin:
+            UserUnlockedSkinColor.objects.create(user=instance, catalog_item=random_skin)
+        if random_color:
+            UserUnlockedColor.objects.create(user=instance, catalog_item=random_color)
 
         Avatar.objects.create(
             user=instance,
