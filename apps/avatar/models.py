@@ -12,26 +12,69 @@ class UnlockedItemType(models.TextChoices):
     ACCESSORY = "ACCESSORY", "Accessory"
 
 
+class AvatarType(models.TextChoices):
+    BOY = "BOY", "Boy"
+    GIRL = "GIRL", "Girl"
+
+
+class BaseCatalog(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=100)
+    price = models.PositiveIntegerField(default=0)
+
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+        ordering = ["sort_order", "code"]
+
+    def __str__(self):
+        return self.code
+
+
+class AvatarColorCatalog(BaseCatalog):
+    hex = models.CharField(max_length=7)
+
+
+class AvatarSkinColorCatalog(BaseCatalog):
+    main_color = models.CharField(max_length=7)
+    second_color = models.CharField(max_length=7)
+
+
+class AvatarItemCatalog(BaseCatalog):
+    item_type = models.CharField(max_length=20, choices=UnlockedItemType.choices)
+    avatar_type = models.CharField(max_length=20, choices=AvatarType.choices)
+    svg = models.CharField(max_length=200)
+
+    class Meta(BaseCatalog.Meta):
+        indexes = [
+            models.Index(fields=["item_type", "avatar_type", "is_active"]),
+        ]
+
+
 class UserUnlockedItem(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="unlocked_items")
-    item_code = models.CharField(max_length=50)
-    item_type = models.CharField(max_length=20, choices=UnlockedItemType.choices)
+    catalog_item = models.ForeignKey(AvatarItemCatalog, on_delete=models.PROTECT, related_name="unlocks")
     unlocked_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("user", "item_code")
+        unique_together = ("user", "catalog_item")
 
     def __str__(self):
-        return f"{self.item_code}"
+        return f"{self.catalog_item.item_type}"
 
 
 class UserUnlockedColor(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="unlocked_colors")
-    color_code = models.CharField(max_length=50)
+    catalog_item = models.ForeignKey(AvatarColorCatalog, on_delete=models.PROTECT, related_name="unlocks")
     unlocked_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("user", "color_code")
+        unique_together = ("user", "catalog_item")
 
     def __str__(self):
         return f"{self.color_code}"
@@ -39,14 +82,15 @@ class UserUnlockedColor(models.Model):
 
 class UserUnlockedSkinColor(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="unlocked_skin_colors")
-    color_code = models.CharField(max_length=50)
+    catalog_item = models.ForeignKey(AvatarSkinColorCatalog, on_delete=models.PROTECT, related_name="unlocks")
     unlocked_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("user", "color_code")
+        unique_together = ("user", "catalog_item")
 
     def __str__(self):
         return f"{self.color_code}"
+
 
 class UserUnlockedEyesColor(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="unlocked_eyes_colors")
@@ -58,10 +102,6 @@ class UserUnlockedEyesColor(models.Model):
 
     def __str__(self):
         return f"{self.color_code}"
-
-class AvatarType(models.TextChoices):
-    BOY = "BOY", "Boy"
-    GIRL = "GIRL", "Girl"
 
 
 class Avatar(models.Model):

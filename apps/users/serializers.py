@@ -81,6 +81,7 @@ class UserMeSerializer(serializers.ModelSerializer):
             "user_level_display",
             "profile_color",
             "notifications",
+            "coin_balance",
             "active_days",
             "story_count",
             "likes_count",
