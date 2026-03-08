@@ -28,6 +28,13 @@ class AvatarColorCatalogAdmin(CatalogAdmin):
     list_display = ("code", "name", "hex", "price", "sort_order", "is_active")
     list_filter = ("is_active",)
     search_fields = ("code", "name")
+    readonly_fields = ("code", "name", "hex", "price", "sort_order", "is_active", "created_at", "updated_at")
+
+    def get_readonly_fields(self, _request, obj=None):
+        return self.readonly_fields
+
+    def has_add_permission(self, _request):
+        return False
 
 
 @admin.register(AvatarSkinColorCatalog)
@@ -35,6 +42,15 @@ class AvatarSkinColorCatalogAdmin(CatalogAdmin):
     list_display = ("code", "name", "main_color", "second_color", "price", "sort_order", "is_active")
     list_filter = ("is_active",)
     search_fields = ("code", "name")
+    readonly_fields = (
+        "code", "name", "main_color", "second_color", "price", "sort_order", "is_active", "created_at", "updated_at"
+    )
+
+    def get_readonly_fields(self, _request, obj=None):
+        return self.readonly_fields
+
+    def has_add_permission(self, _request):
+        return False
 
 
 @admin.register(AvatarItemCatalog)
