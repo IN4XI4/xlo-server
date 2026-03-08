@@ -1,6 +1,48 @@
 from django.contrib import admin
 
-from apps.avatar.models import Avatar, UserUnlockedItem, UserUnlockedColor, UserUnlockedSkinColor, UserUnlockedEyesColor
+from apps.avatar.models import (
+    Avatar,
+    AvatarColorCatalog,
+    AvatarItemCatalog,
+    AvatarSkinColorCatalog,
+    UserUnlockedColor,
+    UserUnlockedEyesColor,
+    UserUnlockedItem,
+    UserUnlockedSkinColor,
+)
+
+
+class CatalogAdmin(admin.ModelAdmin):
+    list_per_page = 100
+    protected_fields = ("code",)
+
+    def get_readonly_fields(self, _request, obj=None):
+        return self.protected_fields if obj else ()
+
+    def has_delete_permission(self, *_):
+        return False
+
+
+@admin.register(AvatarColorCatalog)
+class AvatarColorCatalogAdmin(CatalogAdmin):
+    list_display = ("code", "name", "hex", "price", "sort_order", "is_active")
+    list_filter = ("is_active",)
+    search_fields = ("code", "name")
+
+
+@admin.register(AvatarSkinColorCatalog)
+class AvatarSkinColorCatalogAdmin(CatalogAdmin):
+    list_display = ("code", "name", "main_color", "second_color", "price", "sort_order", "is_active")
+    list_filter = ("is_active",)
+    search_fields = ("code", "name")
+
+
+@admin.register(AvatarItemCatalog)
+class AvatarItemCatalogAdmin(CatalogAdmin):
+    list_display = ("code", "name", "item_type", "avatar_type", "price", "sort_order", "is_active")
+    list_filter = ("item_type", "avatar_type", "is_active")
+    search_fields = ("code", "name")
+    protected_fields = ("code", "svg")
 
 
 @admin.register(UserUnlockedItem)
