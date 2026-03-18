@@ -1,0 +1,113 @@
+{
+  "name": "Python Fundamentals",
+  "description": "Test your knowledge of Python basics",
+  "language": "EN",
+  "topic": null,
+  "spaces": [],
+  "is_private": false,
+  "min_score": 70,
+  "number_of_questions": 5,
+  "allowed_attempts": 3,
+  "time_limit": 30,
+  "difficulty": 4.0,
+  "questions": [
+    {
+      "description": "What is the output of print(type([]))?",
+      "is_multiple_choice": false,
+      "choices": [
+        {
+          "description": "<class 'list'>",
+          "correct_answer": true
+        },
+        {
+          "description": "<class 'tuple'>",
+          "correct_answer": false
+        },
+        {
+          "description": "<class 'dict'>",
+          "correct_answer": false
+        }
+      ]
+    },
+    {
+      "description": "Which of the following are mutable data types in Python?",
+      "is_multiple_choice": true,
+      "choices": [
+        {
+          "description": "list",
+          "correct_answer": true
+        },
+        {
+          "description": "dict",
+          "correct_answer": true
+        },
+        {
+          "description": "tuple",
+          "correct_answer": false
+        },
+        {
+          "description": "string",
+          "correct_answer": false
+        }
+      ]
+    },
+    {
+      "description": "What keyword is used to define a function in Python?",
+      "is_multiple_choice": false,
+      "choices": [
+        {
+          "description": "def",
+          "correct_answer": true
+        },
+        {
+          "description": "function",
+          "correct_answer": false
+        },
+        {
+          "description": "fun",
+          "correct_answer": false
+        }
+      ]
+    },
+    {
+      "description": "What is the result of 5 // 2 in Python?",
+      "is_multiple_choice": false,
+      "choices": [
+        {
+          "description": "2",
+          "correct_answer": true
+        },
+        {
+          "description": "2.5",
+          "correct_answer": false
+        },
+        {
+          "description": "3",
+          "correct_answer": false
+        }
+      ]
+    },
+    {
+      "description": "Which methods can be used to add elements to a list?",
+      "is_multiple_choice": true,
+      "choices": [
+        {
+          "description": "append()",
+          "correct_answer": true
+        },
+        {
+          "description": "extend()",
+          "correct_answer": true
+        },
+        {
+          "description": "insert()",
+          "correct_answer": true
+        },
+        {
+          "description": "add()",
+          "correct_answer": false
+        }
+      ]
+    }
+  ]
+}

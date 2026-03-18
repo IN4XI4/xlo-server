@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.db.models import Q, Count, Avg, Case, When, IntegerField
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -12,6 +13,7 @@ from apps.assessments.serializers import (
     ChoiceSerializer,
     AssessmentDifficultyRatingSerializer,
     FollowAssessmentSerializer,
+    CreateFullAssessmentSerializer,
 )
 from apps.assessments.permissions import AssessmentPermissions, QuestionChoicePermissions, FollowAssessmentPermissions
 from apps.attempts.models import Attempt
@@ -114,6 +116,74 @@ class AssessmentViewSet(viewsets.ModelViewSet):
         assessment.save()
 
         return Response({"detail": "Assessment validated and activated successfully."}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["POST"], url_path="create-full")
+    def create_full(self, request):
+        serializer = CreateFullAssessmentSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        questions_data = serializer.validated_data.pop("questions")
+        number_of_questions = serializer.validated_data.get("number_of_questions", 10)
+
+        # Validate each question using the same rules as validate_question()
+        errors = []
+        for i, question_data in enumerate(questions_data):
+            choices_data = question_data.get("choices", [])
+            total_choices = len(choices_data)
+            correct_choices = sum(1 for c in choices_data if c.get("correct_answer", False))
+            is_multiple_choice = question_data.get("is_multiple_choice", False)
+
+            if is_multiple_choice:
+                if total_choices < 3:
+                    errors.append({"question_index": i, "error": "The question should have at least 3 choices."})
+                elif correct_choices < 2:
+                    errors.append({"question_index": i, "error": "The question should have at least 2 correct choices."})
+            else:
+                if total_choices < 2:
+                    errors.append({"question_index": i, "error": "The question should have at least 2 choices."})
+                elif correct_choices != 1:
+                    errors.append({"question_index": i, "error": "The question should have only 1 correct choice."})
+
+        if errors:
+            return Response({"errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        if len(questions_data) < number_of_questions:
+            return Response(
+                {
+                    "error": (
+                        f"The assessment requires at least {number_of_questions} questions, "
+                        f"but only {len(questions_data)} were provided."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        with transaction.atomic():
+            assessment = serializer.save(user=request.user)
+
+            created_questions = []
+            for question_data in questions_data:
+                choices_data = question_data.pop("choices")
+                question = Question.objects.create(assessment=assessment, is_active=True, **question_data)
+
+                created_choices = []
+                for choice_data in choices_data:
+                    created_choices.append(Choice.objects.create(question=question, **choice_data))
+
+                created_questions.append((question, created_choices))
+
+        assessment_data = AssessmentSerializer(assessment, context={"request": request}).data
+
+        questions_response = []
+        for question, choices in created_questions:
+            q_data = QuestionSerializer(question).data
+            q_data["choices"] = ChoiceSerializer(choices, many=True).data
+            questions_response.append(q_data)
+
+        return Response(
+            {"assessment": assessment_data, "questions": questions_response},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class QuestionViewSet(viewsets.ModelViewSet):

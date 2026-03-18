@@ -92,11 +92,22 @@ def create_auth_token(sender, instance=None, created=False, **kwargs):
 
 
 @receiver(post_save, sender=CustomUser)
-def create_mentor_for_new_user(sender, instance, created, **kwargs):
+def setup_new_user(sender, instance, created, **kwargs):
     if created:
         from apps.base.models import Mentor
+        from apps.wallet.models import CoinLedgerEntry
 
         Mentor.objects.create(user=instance, created_by=instance)
+
+        WELCOME_COINS = 50
+        CustomUser.objects.filter(pk=instance.pk).update(coin_balance=WELCOME_COINS)
+        CoinLedgerEntry.objects.create(
+            user=instance,
+            entry_type=CoinLedgerEntry.Type.CREDIT,
+            amount=WELCOME_COINS,
+            reference_id="welcome_bonus",
+            idempotency_key=f"welcome_bonus_{instance.pk}",
+        )
 
 
 @receiver(post_save, sender=CustomUser)
