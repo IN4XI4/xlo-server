@@ -80,6 +80,38 @@ class ChoiceSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class ChoiceInputSerializer(serializers.Serializer):
+    description = serializers.CharField()
+    correct_answer = serializers.BooleanField(default=False)
+    audio = serializers.FileField(required=False, allow_null=True)
+    image = serializers.ImageField(required=False, allow_null=True)
+
+
+class QuestionInputSerializer(serializers.Serializer):
+    description = serializers.CharField()
+    audio = serializers.FileField(required=False, allow_null=True)
+    image = serializers.ImageField(required=False, allow_null=True)
+    file = serializers.FileField(required=False, allow_null=True)
+    is_multiple_choice = serializers.BooleanField(default=False)
+    choices = ChoiceInputSerializer(many=True)
+
+
+class CreateFullAssessmentSerializer(serializers.ModelSerializer):
+    questions = QuestionInputSerializer(many=True)
+
+    class Meta:
+        model = Assessment
+        exclude = [
+            "user",
+            "is_active",
+            "average_score",
+            "user_difficulty_rating",
+            "attempts_count",
+            "created_at",
+            "updated_at",
+        ]
+
+
 class AssessmentDifficultyRatingSerializer(serializers.ModelSerializer):
     class Meta:
         model = AssessmentDifficultyRating

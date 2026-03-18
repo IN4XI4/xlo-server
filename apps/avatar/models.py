@@ -10,6 +10,7 @@ class UnlockedItemType(models.TextChoices):
     PANTS = "PANTS", "Pants"
     SHOES = "SHOES", "Shoes"
     ACCESSORY = "ACCESSORY", "Accessory"
+    KI = "KI", "Ki"
 
 
 class AvatarType(models.TextChoices):
@@ -122,6 +123,12 @@ class Avatar(models.Model):
     )
     accessory_color = models.ForeignKey(
         UserUnlockedColor, null=True, blank=True, on_delete=models.SET_NULL, related_name="used_for_accessory"
+    )
+    ki_item = models.ForeignKey(
+        UserUnlockedItem, null=True, blank=True, on_delete=models.SET_NULL, related_name="selected_as_ki"
+    )
+    ki_color = models.ForeignKey(
+        UserUnlockedColor, null=True, blank=True, on_delete=models.SET_NULL, related_name="used_for_ki"
     )
     skin_color = models.ForeignKey(UserUnlockedSkinColor, on_delete=models.PROTECT, related_name="used_for_skin")
     updated_at = models.DateTimeField(auto_now=True)

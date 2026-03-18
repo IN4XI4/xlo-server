@@ -113,7 +113,7 @@ class UserUnlockedItemViewSet(viewsets.ReadOnlyModelViewSet):
                 user=request.user,
                 catalog_item__avatar_type=avatar_type,
             )
-            .exclude(catalog_item__item_type=UnlockedItemType.ACCESSORY)
+            .exclude(catalog_item__item_type__in=[UnlockedItemType.ACCESSORY, UnlockedItemType.KI])
             .select_related("catalog_item")
             .order_by("catalog_item__item_type", "id")
             .distinct("catalog_item__item_type")

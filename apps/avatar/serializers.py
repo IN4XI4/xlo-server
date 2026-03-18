@@ -20,6 +20,7 @@ class AvatarSerializer(serializers.ModelSerializer):
     pants_item = serializers.SerializerMethodField()
     shoes_item = serializers.SerializerMethodField()
     accessory_item = serializers.SerializerMethodField()
+    ki_item = serializers.SerializerMethodField()
 
     eyes_color = serializers.SerializerMethodField()
     hair_color = serializers.SerializerMethodField()
@@ -27,6 +28,7 @@ class AvatarSerializer(serializers.ModelSerializer):
     pants_color = serializers.SerializerMethodField()
     shoes_color = serializers.SerializerMethodField()
     accessory_color = serializers.SerializerMethodField()
+    ki_color = serializers.SerializerMethodField()
     skin_color = serializers.SerializerMethodField()
 
     class Meta:
@@ -61,6 +63,9 @@ class AvatarSerializer(serializers.ModelSerializer):
     def get_accessory_item(self, obj):
         return self._get_item_payload(obj, "accessory_item")
 
+    def get_ki_item(self, obj):
+        return self._get_item_payload(obj, "ki_item")
+
     def _get_color_payload(self, obj, attr: str):
         color = getattr(obj, attr)
         if not color:
@@ -88,6 +93,9 @@ class AvatarSerializer(serializers.ModelSerializer):
     def get_accessory_color(self, obj):
         return self._get_color_payload(obj, "accessory_color")
 
+    def get_ki_color(self, obj):
+        return self._get_color_payload(obj, "ki_color")
+
     def get_skin_color(self, obj):
         return {
             "id": obj.skin_color_id,
@@ -113,6 +121,8 @@ class AvatarUpdateSerializer(serializers.ModelSerializer):
             "shoes_color",
             "accessory_item",
             "accessory_color",
+            "ki_item",
+            "ki_color",
             "skin_color",
         ]
         read_only_fields = ["user"]
