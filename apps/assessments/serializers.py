@@ -33,6 +33,7 @@ class AssessmentDetailSerializer(serializers.ModelSerializer):
     category_name = serializers.ReadOnlyField(source="topic.tag.name")
     followers_count = serializers.SerializerMethodField()
     available_attempts = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
     is_following = serializers.SerializerMethodField()
     language_name = serializers.SerializerMethodField()
 
@@ -46,13 +47,17 @@ class AssessmentDetailSerializer(serializers.ModelSerializer):
     def get_available_attempts(self, obj):
         user = self.context["request"].user
         if user.is_authenticated:
-            attempts = Attempt.objects.filter(user=user, assessment=obj)
-            perfect_score_exists = attempts.filter(score=100).exists()
-            if perfect_score_exists:
+            if obj.user == user:
                 return 0
-            attempts_made = attempts.count()
-            return obj.allowed_attempts - attempts_made
+            attempts = Attempt.objects.filter(user=user, assessment=obj)
+            if attempts.filter(score=100).exists():
+                return 0
+            return obj.allowed_attempts - attempts.count()
         return 0
+
+    def get_is_owner(self, obj):
+        user = self.context["request"].user
+        return user.is_authenticated and obj.user == user
 
     def get_is_following(self, obj):
         user = self.context["request"].user
