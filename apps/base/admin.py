@@ -22,7 +22,8 @@ class TopicAdminForm(forms.ModelForm):
 @admin.register(Topic)
 class TopicAdmin(admin.ModelAdmin):
     form = TopicAdminForm
-    search_fields = ("name",)
+    list_display = ("id", "title", "slug", "tag")
+    search_fields = ("title",)
     list_per_page = 100
 
 

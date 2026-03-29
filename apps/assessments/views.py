@@ -15,7 +15,12 @@ from apps.assessments.serializers import (
     FollowAssessmentSerializer,
     CreateFullAssessmentSerializer,
 )
-from apps.assessments.permissions import AssessmentPermissions, QuestionChoicePermissions, FollowAssessmentPermissions
+from apps.assessments.permissions import (
+    AssessmentPermissions,
+    QuestionChoicePermissions,
+    FollowAssessmentPermissions,
+    AssessmentDifficultyRatingPermissions,
+)
 from apps.attempts.models import Attempt
 
 
@@ -137,7 +142,9 @@ class AssessmentViewSet(viewsets.ModelViewSet):
                 if total_choices < 3:
                     errors.append({"question_index": i, "error": "The question should have at least 3 choices."})
                 elif correct_choices < 2:
-                    errors.append({"question_index": i, "error": "The question should have at least 2 correct choices."})
+                    errors.append(
+                        {"question_index": i, "error": "The question should have at least 2 correct choices."}
+                    )
             else:
                 if total_choices < 2:
                     errors.append({"question_index": i, "error": "The question should have at least 2 choices."})
@@ -339,6 +346,7 @@ class ChoiceViewSet(viewsets.ModelViewSet):
 class AssessmentDifficultyRatingViewSet(viewsets.ModelViewSet):
     queryset = AssessmentDifficultyRating.objects.all()
     serializer_class = AssessmentDifficultyRatingSerializer
+    permission_classes = [AssessmentDifficultyRatingPermissions]
     filterset_fields = {
         "assessment": ("exact", "in"),
         "user": ("exact", "in"),
