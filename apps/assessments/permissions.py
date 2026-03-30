@@ -39,9 +39,7 @@ class QuestionChoicePermissions(permissions.BasePermission):
 
 class AssessmentDifficultyRatingPermissions(permissions.BasePermission):
     def has_permission(self, request, view):
-        if view.action == "create":
-            return request.user.is_authenticated
-        return True
+        return request.user.is_authenticated
 
     def has_object_permission(self, request, view, obj):
         if view.action in ["update", "partial_update", "destroy"]:
