@@ -363,12 +363,17 @@ class AssessmentDifficultyRatingViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         user = self.request.user
         assessment = serializer.validated_data.get("assessment")
+        difficulty = serializer.validated_data.get("difficulty")
         has_completed_attempt = Attempt.objects.filter(
             user=user, assessment=assessment, end_time__isnull=False
         ).exists()
         if not has_completed_attempt:
             raise ValidationError("You must complete the assessment before rating its difficulty.")
-        serializer.save(user=user)
+        AssessmentDifficultyRating.objects.update_or_create(
+            user=user,
+            assessment=assessment,
+            defaults={"difficulty": difficulty},
+        )
         self.update_assessment_rating(assessment)
 
     def perform_update(self, serializer):
@@ -384,6 +389,17 @@ class AssessmentDifficultyRatingViewSet(viewsets.ModelViewSet):
         super().perform_destroy(instance)
 
         self.update_assessment_rating(assessment)
+
+    @action(detail=False, methods=["get"], url_path="my-rating")
+    def my_rating(self, request):
+        assessment_id = request.query_params.get("assessment")
+        if not assessment_id:
+            return Response({"detail": "assessment query param is required."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            rating = AssessmentDifficultyRating.objects.get(user=request.user, assessment_id=assessment_id)
+            return Response(AssessmentDifficultyRatingSerializer(rating).data)
+        except AssessmentDifficultyRating.DoesNotExist:
+            return Response(None)
 
 
 class FollowAssessmentViewSet(viewsets.ModelViewSet):
