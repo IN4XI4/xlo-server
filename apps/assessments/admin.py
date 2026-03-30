@@ -18,6 +18,10 @@ class QuestionAdmin(admin.ModelAdmin):
     list_per_page = 100
 
 
-admin.site.register(Assessment)
+@admin.register(Assessment)
+class AssessmentAdmin(admin.ModelAdmin):
+    readonly_fields = ("user_difficulty_rating", "average_score", "attempts_count")
+
+
 admin.site.register(AssessmentDifficultyRating)
 admin.site.register(FollowAssessment)
