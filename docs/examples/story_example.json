@@ -1,0 +1,44 @@
+{
+  "title": "How to overcome the fear of public speaking",
+  "subtitle": "A real story about resilience",
+  "topic": 36,
+  "difficulty_level": 2,
+  "language": "EN",
+  "is_active": true,
+  "cards": [
+    {
+      "title": "The moment of fear",
+      "soft_skill": 10,
+      "mentor": 68,
+      "blocks": [
+        {
+          "block_class": 1,
+          "content": "The day I stepped on stage for the first time, I felt like the world stopped."
+        },
+        {
+          "block_class": 6,
+          "content": "Courage is not the absence of fear, but acting in spite of it.",
+          "quoted_by": "Nelson Mandela"
+        },
+        {
+          "block_class": 8,
+          "content": "Most people fear public speaking more than death.",
+          "content_class": "FACT"
+        },
+        {
+          "block_class": 10,
+          "content": "Which strategy is most effective for calming nerves before speaking in public?",
+          "options": {
+            "correct_answer": ["Deep breathing"],
+            "incorrect_answers": ["Ignoring nervousness", "Avoiding eye contact"]
+          }
+        },
+        {
+          "block_class": 12,
+          "content": "Think about a moment when you faced a fear and pushed through it.",
+          "content_2": "Every time you face fear, you build resilience. That courage compounds over time."
+        }
+      ]
+    }
+  ]
+}

@@ -43,6 +43,7 @@ from .permissions import (
 from .serializers import (
     StorySerializer,
     StoryDetailSerializer,
+    StoryFullCreateSerializer,
     CardSerializer,
     CommentSerializer,
     LikeSerializer,
@@ -396,6 +397,15 @@ class StoriesViewSet(viewsets.ModelViewSet):
         # Send to interested users:
         send_new_stories_email.delay(story.topic.id)
         return Response(story_serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=["post"], url_path="create-story-full-json", parser_classes=[JSONParser])
+    def create_story_full_json(self, request):
+        serializer = StoryFullCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        story = serializer.save(user=request.user, is_active=True)
+        send_new_stories_email.delay(story.topic.id)
+        return Response(StorySerializer(story).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["put"], url_path="update-story-full")
     def update_story_full(self, request, pk=None):

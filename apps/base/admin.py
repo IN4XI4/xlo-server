@@ -29,6 +29,7 @@ class TopicAdmin(admin.ModelAdmin):
 
 @admin.register(SoftSkill)
 class SoftSkillAdmin(admin.ModelAdmin):
+    list_display = ("id", "name", "monster_name")
     search_fields = ("name",)
     list_per_page = 100
 
