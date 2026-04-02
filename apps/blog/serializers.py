@@ -1,4 +1,5 @@
 from django.contrib.contenttypes.models import ContentType
+from django.db import transaction
 from rest_framework import serializers
 
 from .models import (
@@ -200,7 +201,34 @@ class CardSerializer(serializers.ModelSerializer):
         read_only_fields = ["created_time", "updated_time"]
 
 
-class BlockSerializer(serializers.ModelSerializer):
+class BlockValidateMixin:
+    def validate(self, data):
+        if data.get("block_class") == 10:  # Type "QUESTION"
+            options = data.get("options") or {}
+            correct_answers = options.get("correct_answer", [])
+            incorrect_answers = options.get("incorrect_answers", [])
+
+            if not correct_answers:
+                raise serializers.ValidationError("A question block must have at least one correct answer.")
+            if not incorrect_answers:
+                raise serializers.ValidationError("A question block must have at least one incorrect answer.")
+            if not isinstance(correct_answers, list) or not isinstance(incorrect_answers, list):
+                raise serializers.ValidationError("Correct and incorrect answers must be lists.")
+        elif data.get("block_class") == 14:  # Type "MULTICHOICE"
+            options = data.get("options") or {}
+            correct_answers = options.get("correct_answers", [])
+            incorrect_answers = options.get("incorrect_answers", [])
+
+            if not correct_answers or len(correct_answers) < 2:
+                raise serializers.ValidationError("A multichoice block must have at least two correct answers.")
+            if not incorrect_answers:
+                raise serializers.ValidationError("A multichoice block must have at least one incorrect answer.")
+            if not isinstance(correct_answers, list) or not isinstance(incorrect_answers, list):
+                raise serializers.ValidationError("Correct and incorrect answers must be lists.")
+        return data
+
+
+class BlockSerializer(BlockValidateMixin, serializers.ModelSerializer):
     block_color_string = serializers.ReadOnlyField(source="block_color.color")
     block_type_name = serializers.SerializerMethodField()
     user_has_liked = serializers.SerializerMethodField()
@@ -230,33 +258,6 @@ class BlockSerializer(serializers.ModelSerializer):
             return {"recall": True, "level": recall.importance_level, "recall_id": recall.id}
         else:
             return {"recall": False, "level": None, "recall_id": None}
-
-    def validate(self, data):
-        if data.get("block_class") == 10:  # Type "QUESTION"
-            options = data.get("options", [])
-            correct_answers = options.get("correct_answer", [])
-            incorrect_answers = options.get("incorrect_answers", [])
-
-            if not correct_answers:
-                raise serializers.ValidationError("A question block must have at least one correct answer.")
-            if not incorrect_answers:
-                raise serializers.ValidationError("A question block must have at least one incorrect answer.")
-
-            if not isinstance(correct_answers, list) or not isinstance(incorrect_answers, list):
-                raise serializers.ValidationError("Correct and incorrect answers must be lists.")
-        elif data.get("block_class") == 14:  # Type "MULTI CHOICE QUESTION"
-            options = data.get("options", [])
-            correct_answers = options.get("correct_answers", [])
-            incorrect_answers = options.get("incorrect_answers", [])
-
-            if not correct_answers or len(correct_answers) < 2:
-                raise serializers.ValidationError("A Multi choice question block must have at least two correct answers.")
-            if not incorrect_answers:
-                raise serializers.ValidationError("A question block must have at least one incorrect answer.")
-
-            if not isinstance(correct_answers, list) or not isinstance(incorrect_answers, list):
-                raise serializers.ValidationError("Correct and incorrect answers must be lists.")
-        return data
 
 
 class BlockDetailSerializer(serializers.ModelSerializer):
@@ -504,3 +505,34 @@ class NotificationSerializer(serializers.ModelSerializer):
             if reply and reply.user.profile_picture:
                 return request.build_absolute_uri(reply.user.profile_picture.url)
         return None
+
+
+class BlockInlineSerializer(BlockValidateMixin, serializers.ModelSerializer):
+    class Meta:
+        model = Block
+        exclude = ["card"]
+
+
+class CardInlineSerializer(serializers.ModelSerializer):
+    blocks = BlockInlineSerializer(many=True, required=False)
+
+    class Meta:
+        model = Card
+        exclude = ["story"]
+
+
+class StoryFullCreateSerializer(StorySerializer):
+    cards = CardInlineSerializer(many=True, required=False)
+
+    class Meta(StorySerializer.Meta):
+        fields = StorySerializer.Meta.fields + ["cards"]
+
+    def create(self, validated_data):
+        cards_data = validated_data.pop("cards", [])
+        with transaction.atomic():
+            story = super().create(validated_data)
+            for card_data in cards_data:
+                blocks_data = card_data.pop("blocks", [])
+                card = Card.objects.create(story=story, **card_data)
+                Block.objects.bulk_create([Block(card=card, **b) for b in blocks_data])
+        return story

@@ -174,7 +174,7 @@ When a user asks you to create an assessment, follow these steps:
 2. **Confirm or infer:** difficulty level, number of questions, language, and any special requirements. If not provided, use sensible defaults.
 3. **Design the questions** — always create **50% more questions** than `number_of_questions` to fill the pool for randomization.
 4. **Calculate** `time_limit`, `min_score`, and `allowed_attempts` using the guides above.
-5. **Save the JSON file** to `json_assessments/` using the naming convention below.
+5. **Save the JSON file** to `docs/json_assessments/` using the naming convention below.
 6. **Confirm** the file was saved by stating the filename.
 
 If the user provides partial instructions (e.g., only a topic), proceed with defaults and generate the assessment. Do not ask multiple clarifying questions; make reasonable assumptions and state them briefly before saving.
