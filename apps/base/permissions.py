@@ -1,11 +1,11 @@
 from rest_framework import permissions
 
 from apps.users.utils import get_user_level
-from xloserver.constants import LEVEL_GROUPS
+from xloserver.constants import get_level
 
 
 class MentorPermissions(permissions.BasePermission):
-    creator_lvl_3_required_value = LEVEL_GROUPS.get("creator lvl 3", 0)
+    creator_lvl_3_required_value = get_level("Creator Lvl 3")
     """
     Custom permission:
     - Require authentication for any action.

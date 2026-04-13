@@ -1,22 +1,21 @@
-from xloserver.constants import LEVEL_GROUPS
+from xloserver.constants import USER_LEVELS, ACTIVITY_POINT_ACTIONS
 
 
 def get_user_level(user):
     """
     Returns numeric and text user level value.
     """
-    if user.is_superuser or user.is_staff:
-        highest_level_value = max(LEVEL_GROUPS.values())
-        return highest_level_value, "Admin"
+    level_data = USER_LEVELS[min(user.level, len(USER_LEVELS) - 1)]
+    return level_data["level"], level_data["name"]
 
-    user_groups = user.groups.values_list("name", flat=True)
-    max_level_value = 0
-    max_level_name = "Basic"
 
-    for group in user_groups:
-        level_value = LEVEL_GROUPS.get(group, 0)
-        if level_value > max_level_value:
-            max_level_value = level_value
-            max_level_name = group
+def award_activity_points(user, action_key):
+    """
+    Dispatches a task to award activity points and check for level-up.
+    """
+    from apps.users.tasks import process_activity_points
 
-    return max_level_value, max_level_name
+    if action_key not in ACTIVITY_POINT_ACTIONS:
+        return
+
+    process_activity_points.delay(user.id, action_key)

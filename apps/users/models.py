@@ -1,6 +1,7 @@
 import os
 
 from django.db import models
+from xloserver.constants import ACTIVITY_POINT_ACTIONS
 from django.conf import settings
 from django.dispatch import receiver
 from django.db.models.signals import post_save
@@ -78,6 +79,7 @@ class CustomUser(AbstractUser):
     coin_last_updated_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     average_score = models.FloatField(default=0)
     points = models.IntegerField(default=0)
+    level = models.PositiveSmallIntegerField(default=0)
 
     USERNAME_FIELD = "email"
     EMAIL_FIELD = "email"
@@ -235,3 +237,22 @@ class Follow(models.Model):
 
     def __str__(self):
         return f"{self.follower} -> {self.followed}"
+
+
+ActivityPointActionKey = models.TextChoices(
+    "ActivityPointActionKey", {key: key for key in ACTIVITY_POINT_ACTIONS}
+)
+
+
+class ActivityPoints(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="activity_points_log")
+    action_key = models.CharField(max_length=50, choices=ActivityPointActionKey.choices)
+    points = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["user", "-created_at"])]
+        verbose_name_plural = "Activity Points"
+
+    def __str__(self):
+        return f"{self.user} — {self.action_key} ({self.points} pts)"

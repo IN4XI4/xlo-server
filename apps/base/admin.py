@@ -6,6 +6,17 @@ from ckeditor.widgets import CKEditorWidget
 from .models import TopicTag, Topic, SoftSkill, Mentor, EmailSending
 
 
+class ReadOnlyModelAdmin(admin.ModelAdmin):
+    def has_add_permission(self, _request):
+        return False
+
+    def has_change_permission(self, _request, _obj=None):
+        return False
+
+    def has_delete_permission(self, _request, _obj=None):
+        return False
+
+
 @admin.register(TopicTag)
 class CategoryAdmin(admin.ModelAdmin):
     search_fields = ("name",)
