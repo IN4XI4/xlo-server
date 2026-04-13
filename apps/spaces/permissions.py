@@ -1,11 +1,11 @@
 from rest_framework import permissions
 
 from apps.users.utils import get_user_level
-from xloserver.constants import LEVEL_GROUPS
+from xloserver.constants import get_level
 
 
 class SpacePermissions(permissions.BasePermission):
-    premium_required_level = LEVEL_GROUPS.get("premium", 0)
+    premium_required_level = get_level("Expert")
 
     def has_permission(self, request, view):
         if view.action in ["list", "retrieve"]:

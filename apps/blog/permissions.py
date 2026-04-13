@@ -3,7 +3,7 @@ from rest_framework import permissions
 from .models import Story, Card
 
 from apps.users.utils import get_user_level
-from xloserver.constants import LEVEL_GROUPS
+from xloserver.constants import get_level
 
 class IsStaffOrSuperUser(permissions.BasePermission):
     """
@@ -15,8 +15,8 @@ class IsStaffOrSuperUser(permissions.BasePermission):
 
 
 class StoryPermissions(permissions.BasePermission):
-    commentor_required_value = LEVEL_GROUPS.get("commentor", 0)
-    creator_required_value = LEVEL_GROUPS.get("creator", 0)
+    commentor_required_value = get_level("Commentor")
+    creator_required_value = get_level("Creator")
     """
     Custom permission:
     - Require authentication for any action.

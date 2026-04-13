@@ -18,7 +18,7 @@ from .serializers import (
 )
 from .permissions import MentorPermissions
 from apps.users.utils import get_user_level
-from xloserver.constants import LEVEL_GROUPS
+from xloserver.constants import get_level
 
 
 class CustomPagination(PageNumberPagination):
@@ -105,9 +105,9 @@ class MentorsViewSet(viewsets.ModelViewSet):
         user_level, _ = get_user_level(user)
         queryset = Mentor.objects.filter(user__isnull=True)
 
-        if user_level >= LEVEL_GROUPS["creator lvl 2"]:
+        if user_level >= get_level("Creator Lvl 2"):
             queryset = queryset | Mentor.objects.filter(user=user)
-        if user_level >= LEVEL_GROUPS["creator lvl 3"]:
+        if user_level >= get_level("Creator Lvl 3"):
             queryset = queryset | Mentor.objects.filter(created_by=user)
         return queryset.order_by("-id")
 

@@ -4,7 +4,7 @@ from rest_framework import serializers
 from .models import TopicTag, Topic, SoftSkill, Mentor
 from apps.blog.models import Like, Card, UserCardView
 from apps.users.utils import get_user_level
-from xloserver.constants import LEVEL_GROUPS
+from xloserver.constants import get_level
 
 
 class TopicReadOnlySerializer(serializers.ModelSerializer):
@@ -69,9 +69,8 @@ class TopicSerializer(serializers.ModelSerializer):
         user = self.context["request"].user
         if user.is_anonymous:
             return False
-        creator_level = LEVEL_GROUPS.get("creator", 0)
         user_level_value, _ = get_user_level(user)
-        return user_level_value >= creator_level or user.is_staff or user.is_superuser
+        return user_level_value >= get_level("Creator") or user.is_staff or user.is_superuser
 
     class Meta:
         model = Topic

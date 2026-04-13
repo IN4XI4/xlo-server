@@ -7,7 +7,7 @@ from rest_framework import serializers
 from apps.blog.models import Like, Story, Comment, UserStoryView
 from apps.users.models import ProfileColor, Experience, Gender, UserBadge, BadgeLevels, Follow
 from apps.users.utils import get_user_level
-from xloserver.constants import LEVEL_GROUPS
+from xloserver.constants import get_level
 
 
 class ProfileColorSerializer(serializers.ModelSerializer):
@@ -100,13 +100,18 @@ class UserMeSerializer(serializers.ModelSerializer):
         return {"level_value": numeric_level, "level_name": level_name}
 
     def get_notifications(self, obj):
-        unread_notifications = obj.notifications.filter(has_viewed=False)
-        notification_info = {
-            "has_unread": unread_notifications.exists(),
-            "like_count": unread_notifications.filter(notification_type="like").count(),
-            "reply_count": unread_notifications.filter(notification_type="reply").count(),
+        from apps.blog.models import Notification
+        unread = obj.notifications.filter(has_viewed=False)
+        like_count = unread.filter(notification_type=Notification.Type.LIKE).count()
+        reply_count = unread.filter(notification_type=Notification.Type.REPLY).count()
+        level_up_count = unread.filter(notification_type=Notification.Type.LEVEL_UP).count()
+        return {
+            "has_unread": unread.exists(),
+            "total_unread": like_count + reply_count + level_up_count,
+            "like_count": like_count,
+            "reply_count": reply_count,
+            "level_up_count": level_up_count,
         }
-        return notification_info
 
     def get_story_count(self, obj):
         return obj.stories.count()
@@ -120,9 +125,8 @@ class UserMeSerializer(serializers.ModelSerializer):
     def get_is_creator(self, obj):
         if obj.is_anonymous:
             return False
-        creator_level = LEVEL_GROUPS.get("creator", 0)
         user_level_value, _ = get_user_level(obj)
-        return user_level_value >= creator_level or obj.is_staff or obj.is_superuser
+        return user_level_value >= get_level("Creator") or obj.is_staff or obj.is_superuser
 
 
 class CompleteUserSerializer(serializers.ModelSerializer):

@@ -259,13 +259,19 @@ class RecallComment(models.Model):
 
 
 class Notification(models.Model):
+    class Type(models.TextChoices):
+        REPLY = "reply", "Reply"
+        LIKE = "like", "Like"
+        LEVEL_UP = "level_up", "Level Up"
+
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="notifications")
     date = models.DateTimeField(auto_now_add=True)
-    notification_type = models.CharField(max_length=10, choices=(("reply", "Reply"), ("like", "Like")))
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
+    notification_type = models.CharField(max_length=20, choices=Type.choices)
+    content_type = models.ForeignKey(ContentType, null=True, blank=True, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
     content_object = GenericForeignKey("content_type", "object_id")
     has_viewed = models.BooleanField(default=False)
+    metadata = models.JSONField(null=True, blank=True)
 
     def __str__(self):
         return f"Notification for {self.user} - Type: {self.notification_type}"

@@ -6,7 +6,6 @@ from django.db import transaction
 from django.db.models import F, OuterRef, Subquery, Q
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
-from django.contrib.auth.models import Group
 from django.contrib.contenttypes.models import ContentType
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, status
@@ -60,8 +59,7 @@ from .serializers import (
 from .tasks import send_like_email, send_new_stories_email, send_ask_for_help_email
 from .filters import UserOwnedFilterBackend
 from apps.base.models import Topic
-from apps.users.utils import get_user_level
-from xloserver.constants import LEVEL_GROUPS
+from apps.users.utils import award_activity_points
 
 
 def clean_data(data):
@@ -184,6 +182,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
         if request.user.is_superuser:
             story.is_active = True
         story.save()
+        award_activity_points(request.user, "create_story")
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
@@ -665,6 +664,7 @@ class CommentsViewSet(viewsets.ModelViewSet):
                 send_ask_for_help_email.delay(
                     comment.user.id, comment.comment_text, comment.story.title, comment.story.slug
                 )
+        award_activity_points(comment.user, "comment_story")
 
     def get_queryset(self):
         if self.request.user.is_authenticated:
@@ -718,17 +718,9 @@ class UserStoryViewCreate(CreateAPIView):
         story_id = self.request.data.get("story")
         story = get_object_or_404(Story, id=story_id)
 
-        UserStoryView.objects.get_or_create(user=self.request.user, story=story)
-        user_level, _ = get_user_level(self.request.user)
-        commentor_level = LEVEL_GROUPS.get("commentor", 0)
-        if self.request.user.is_superuser or self.request.user.is_staff or user_level >= commentor_level:
-            return
-
-        views_count = UserStoryView.objects.filter(user=self.request.user).count()
-        if views_count >= 3:
-            commentor_group, _ = Group.objects.get_or_create(name="commentor")
-            self.request.user.groups.add(commentor_group)
-            self.request.user.save()
+        _, created = UserStoryView.objects.get_or_create(user=self.request.user, story=story)
+        if created:
+            award_activity_points(self.request.user, "view_story")
 
 
 class RecallCardViewSet(viewsets.ModelViewSet):
