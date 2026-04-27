@@ -31,4 +31,5 @@ urlpatterns = [
     path("avatar/", include("apps.avatar.urls", namespace="avatar")),
     path("assessments/", include("apps.assessments.urls", namespace="assessments")),
     path("attempts/", include("apps.attempts.urls", namespace="attempts")),
+    path("wallet/", include("apps.wallet.urls", namespace="wallet")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -29,7 +29,7 @@ from apps.avatar.serializers import (
     UserUnlockedSkinColorSerializer,
 )
 from apps.users.models import CustomUser
-from apps.wallet.models import CoinSpend
+from apps.wallet.models import CoinLedgerEntry, CoinSpend
 
 
 class CatalogPagination(PageNumberPagination):
@@ -180,12 +180,19 @@ class UserUnlockedItemViewSet(viewsets.ReadOnlyModelViewSet):
                 )
 
             unlocked_item = UserUnlockedItem.objects.create(user=user, catalog_item=catalog_item)
-            CoinSpend.objects.create(
+            spend = CoinSpend.objects.create(
                 user=user,
                 reason=CoinSpend.Reason.BUY_ITEM,
                 coins=catalog_item.price,
                 target_type="avatar_item",
                 target_id=str(catalog_item.id),
+            )
+            CoinLedgerEntry.objects.create(
+                user=user,
+                entry_type=CoinLedgerEntry.Type.DEBIT,
+                amount=catalog_item.price,
+                reference_id=f"spend:{spend.id}",
+                idempotency_key=f"spend:{spend.id}",
             )
             user.coin_balance -= catalog_item.price
             user.save(update_fields=["coin_balance"])
@@ -284,12 +291,19 @@ class UserUnlockedColorViewSet(viewsets.ReadOnlyModelViewSet):
                 )
 
             unlocked_color = UserUnlockedColor.objects.create(user=user, catalog_item=catalog_item)
-            CoinSpend.objects.create(
+            spend = CoinSpend.objects.create(
                 user=user,
                 reason=CoinSpend.Reason.BUY_COLOR,
                 coins=catalog_item.price,
                 target_type="item_color",
                 target_id=str(catalog_item.id),
+            )
+            CoinLedgerEntry.objects.create(
+                user=user,
+                entry_type=CoinLedgerEntry.Type.DEBIT,
+                amount=catalog_item.price,
+                reference_id=f"spend:{spend.id}",
+                idempotency_key=f"spend:{spend.id}",
             )
             user.coin_balance -= catalog_item.price
             user.save(update_fields=["coin_balance"])
@@ -335,12 +349,19 @@ class UserUnlockedSkinColorViewSet(viewsets.ReadOnlyModelViewSet):
                 )
 
             unlocked_skin_color = UserUnlockedSkinColor.objects.create(user=user, catalog_item=catalog_item)
-            CoinSpend.objects.create(
+            spend = CoinSpend.objects.create(
                 user=user,
                 reason=CoinSpend.Reason.BUY_COLOR,
                 coins=catalog_item.price,
                 target_type="skin_color",
                 target_id=str(catalog_item.id),
+            )
+            CoinLedgerEntry.objects.create(
+                user=user,
+                entry_type=CoinLedgerEntry.Type.DEBIT,
+                amount=catalog_item.price,
+                reference_id=f"spend:{spend.id}",
+                idempotency_key=f"spend:{spend.id}",
             )
             user.coin_balance -= catalog_item.price
             user.save(update_fields=["coin_balance"])

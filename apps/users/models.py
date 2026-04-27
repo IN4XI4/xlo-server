@@ -101,6 +101,8 @@ def setup_new_user(sender, instance, created, **kwargs):
 
         Mentor.objects.create(user=instance, created_by=instance)
 
+        from apps.blog.models import Notification
+
         WELCOME_COINS = 50
         CustomUser.objects.filter(pk=instance.pk).update(coin_balance=WELCOME_COINS)
         CoinLedgerEntry.objects.create(
@@ -109,6 +111,11 @@ def setup_new_user(sender, instance, created, **kwargs):
             amount=WELCOME_COINS,
             reference_id="welcome_bonus",
             idempotency_key=f"welcome_bonus_{instance.pk}",
+        )
+        Notification.objects.create(
+            user=instance,
+            notification_type=Notification.Type.WELCOME,
+            metadata={"coins_awarded": WELCOME_COINS},
         )
 
 
