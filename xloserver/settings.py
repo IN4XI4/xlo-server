@@ -48,6 +48,10 @@ if not DEBUG:
 
 ALLOWED_HOSTS = ["api.mixelo.io", "15.237.210.201", "localhost", "127.0.0.1"]
 
+# Stripe
+STRIPE_SECRET_KEY = get_secret("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = get_secret("STRIPE_WEBHOOK_SECRET")
+
 
 # Application definition
 

@@ -55,7 +55,7 @@ class UserSerializer(serializers.ModelSerializer):
         validated_data.pop("password2", None)
         user = get_user_model().objects.create(**validated_data)
         user.set_password(password)
-        user.save()
+        user.save(update_fields=["password"])
         return user
 
 
@@ -82,6 +82,7 @@ class UserMeSerializer(serializers.ModelSerializer):
             "profile_color",
             "notifications",
             "coin_balance",
+            "points",
             "active_days",
             "story_count",
             "likes_count",
@@ -100,17 +101,11 @@ class UserMeSerializer(serializers.ModelSerializer):
         return {"level_value": numeric_level, "level_name": level_name}
 
     def get_notifications(self, obj):
-        from apps.blog.models import Notification
         unread = obj.notifications.filter(has_viewed=False)
-        like_count = unread.filter(notification_type=Notification.Type.LIKE).count()
-        reply_count = unread.filter(notification_type=Notification.Type.REPLY).count()
-        level_up_count = unread.filter(notification_type=Notification.Type.LEVEL_UP).count()
+        total_unread = unread.count()
         return {
-            "has_unread": unread.exists(),
-            "total_unread": like_count + reply_count + level_up_count,
-            "like_count": like_count,
-            "reply_count": reply_count,
-            "level_up_count": level_up_count,
+            "has_unread": total_unread > 0,
+            "total_unread": total_unread,
         }
 
     def get_story_count(self, obj):

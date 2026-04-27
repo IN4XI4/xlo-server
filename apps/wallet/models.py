@@ -13,6 +13,9 @@ class CoinPackage(models.Model):
     currency = models.CharField(max_length=10, default="EUR")
     is_active = models.BooleanField(default=True)
 
+    def __str__(self):
+        return f"{self.name} | {self.coins} coins ({self.price_cents / 100:.2f} {self.currency})"
+
 
 class CoinLedgerEntry(models.Model):
     class Type(models.TextChoices):

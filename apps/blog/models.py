@@ -263,10 +263,13 @@ class Notification(models.Model):
         REPLY = "reply", "Reply"
         LIKE = "like", "Like"
         LEVEL_UP = "level_up", "Level Up"
+        WELCOME = "welcome", "Welcome"
+        COIN_PURCHASE_PENDING = "coin_purchase_pending", "Coin Purchase Pending"
+        COIN_PURCHASE_SUCCESS = "coin_purchase_success", "Coin Purchase Success"
 
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="notifications")
     date = models.DateTimeField(auto_now_add=True)
-    notification_type = models.CharField(max_length=20, choices=Type.choices)
+    notification_type = models.CharField(max_length=30, choices=Type.choices)
     content_type = models.ForeignKey(ContentType, null=True, blank=True, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField(null=True, blank=True)
     content_object = GenericForeignKey("content_type", "object_id")

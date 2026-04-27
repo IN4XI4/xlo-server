@@ -15,20 +15,18 @@ class CoinLedgerEntryAdmin(ReadOnlyModelAdmin):
 
 
 @admin.register(CoinPackage)
-class CoinPackageAdmin(admin.ModelAdmin):
+class CoinPackageAdmin(ReadOnlyModelAdmin):
     list_display = ("id", "name", "coins", "price_cents", "currency", "is_active")
     list_filter = ("is_active", "currency")
     search_fields = ("name",)
     list_per_page = 100
-    readonly_fields = ("id",)
-
-    def has_delete_permission(self, _request, _obj=None):
-        return False
+    readonly_fields = ("id", "name", "coins", "price_cents", "currency", "is_active")
 
 
 @admin.register(CoinPurchase)
 class CoinPurchaseAdmin(ReadOnlyModelAdmin):
     list_display = ("id", "user", "package", "coins", "price_cents", "currency", "status", "created_at", "paid_at")
+    ordering = ("-created_at",)
     list_filter = ("status", "currency")
     search_fields = ("user__email",)
     list_per_page = 100
