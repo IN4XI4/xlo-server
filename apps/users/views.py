@@ -298,28 +298,21 @@ class UserBadgeViewSet(viewsets.ModelViewSet):
                 badges_to_add.append(UserBadge(user=user, badge_type="COLLABORATOR", level=level))
 
         # 5. Explorer Badge
-        total_stories = Story.objects.count()
-
         viewed_stories = UserStoryView.objects.filter(user=user).count()
 
-        if total_stories > 0:
-            viewed_percentage = (viewed_stories / total_stories) * 100
-        else:
-            viewed_percentage = 0
-
         explorer_levels = {
-            20: "Bronze",
-            30: "Silver",
-            40: "Gold",
-            55: "Obsidian",
-            70: "Mixelo",
+            15: "Bronze",
+            50: "Silver",
+            100: "Gold",
+            200: "Obsidian",
+            400: "Mixelo",
         }
-        for percentage, level in explorer_levels.items():
-            if viewed_percentage >= percentage and ("EXPLORER", level) not in user_badges_set:
+        for count, level in explorer_levels.items():
+            if viewed_stories >= count and ("EXPLORER", level) not in user_badges_set:
                 badges_to_add.append(UserBadge(user=user, badge_type="EXPLORER", level=level))
 
         if badges_to_add:
-            created_badges = UserBadge.objects.bulk_create(badges_to_add)
+            created_badges = UserBadge.objects.bulk_create(badges_to_add, ignore_conflicts=True)
 
             serialized_badges = UserBadgeSerializer(created_badges, many=True).data
             return Response(

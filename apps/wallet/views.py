@@ -14,6 +14,7 @@ from apps.base.views import StandardPagination
 from apps.blog.models import Notification
 from .models import CoinLedgerEntry, CoinPackage, CoinPurchase, CoinSpend
 from .serializers import CoinPackageSerializer, LedgerEntrySerializer
+from .tasks import send_coin_purchase_email
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -185,6 +186,12 @@ def stripe_webhook(request):
                 user=purchase.user,
                 notification_type=Notification.Type.COIN_PURCHASE_SUCCESS,
                 metadata={"coins": purchase.coins, "price_cents": purchase.price_cents, "currency": purchase.currency},
+            )
+
+            transaction.on_commit(
+                lambda: send_coin_purchase_email.delay(
+                    purchase.user_id, purchase.coins, purchase.price_cents, purchase.currency
+                )
             )
 
     return HttpResponse(status=200)

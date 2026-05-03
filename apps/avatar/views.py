@@ -28,6 +28,8 @@ from apps.avatar.serializers import (
     UserUnlockedItemSerializer,
     UserUnlockedSkinColorSerializer,
 )
+from apps.avatar.permissions import AvatarPermissions
+from apps.blog.models import Notification
 from apps.users.models import CustomUser
 from apps.wallet.models import CoinLedgerEntry, CoinSpend
 
@@ -37,8 +39,9 @@ class CatalogPagination(PageNumberPagination):
 
 
 class AvatarViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]  # TODO: Fix permissions to only allow owner
+    permission_classes = [AvatarPermissions]
     queryset = Avatar.objects.all()
+    pagination_class = CatalogPagination
     filterset_fields = {
         "user__id": ("exact",),
     }
@@ -49,7 +52,10 @@ class AvatarViewSet(viewsets.ModelViewSet):
         return AvatarSerializer
 
     def perform_update(self, serializer):
-        serializer.save(user=self.request.user)
+        if not (self.request.user.is_superuser or self.request.user.is_staff):
+            serializer.save(user=self.request.user)
+        else:
+            serializer.save()
 
     @action(detail=False, methods=["get"], url_path="my-avatar")
     def get_my_avatar(self, request):
@@ -196,6 +202,19 @@ class UserUnlockedItemViewSet(viewsets.ReadOnlyModelViewSet):
             )
             user.coin_balance -= catalog_item.price
             user.save(update_fields=["coin_balance"])
+            Notification.objects.create(
+                user=user,
+                notification_type=Notification.Type.ITEM_PURCHASE,
+                metadata={
+                    "item_id": catalog_item.id,
+                    "item_name": catalog_item.name,
+                    "item_type": catalog_item.item_type,
+                    "avatar_type": catalog_item.avatar_type,
+                    "code": catalog_item.code,
+                    "svg": catalog_item.svg,
+                    "coins": catalog_item.price,
+                },
+            )
 
         return Response(
             {"unlocked_item_id": unlocked_item.id, "coin_balance": user.coin_balance},
@@ -307,6 +326,17 @@ class UserUnlockedColorViewSet(viewsets.ReadOnlyModelViewSet):
             )
             user.coin_balance -= catalog_item.price
             user.save(update_fields=["coin_balance"])
+            Notification.objects.create(
+                user=user,
+                notification_type=Notification.Type.COLOR_PURCHASE,
+                metadata={
+                    "color_id": catalog_item.id,
+                    "color_name": catalog_item.name,
+                    "hex": catalog_item.hex,
+                    "coins": catalog_item.price,
+                    "color_type": "item_color",
+                },
+            )
 
         return Response(
             {"unlocked_color_id": unlocked_color.id, "coin_balance": user.coin_balance},
@@ -365,6 +395,17 @@ class UserUnlockedSkinColorViewSet(viewsets.ReadOnlyModelViewSet):
             )
             user.coin_balance -= catalog_item.price
             user.save(update_fields=["coin_balance"])
+            Notification.objects.create(
+                user=user,
+                notification_type=Notification.Type.COLOR_PURCHASE,
+                metadata={
+                    "color_id": catalog_item.id,
+                    "color_name": catalog_item.name,
+                    "main_color": catalog_item.main_color,
+                    "coins": catalog_item.price,
+                    "color_type": "skin_color",
+                },
+            )
 
         return Response(
             {"unlocked_skin_color_id": unlocked_skin_color.id, "coin_balance": user.coin_balance},

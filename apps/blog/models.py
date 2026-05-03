@@ -266,6 +266,8 @@ class Notification(models.Model):
         WELCOME = "welcome", "Welcome"
         COIN_PURCHASE_PENDING = "coin_purchase_pending", "Coin Purchase Pending"
         COIN_PURCHASE_SUCCESS = "coin_purchase_success", "Coin Purchase Success"
+        ITEM_PURCHASE = "item_purchase", "Item Purchase"
+        COLOR_PURCHASE = "color_purchase", "Color Purchase"
 
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="notifications")
     date = models.DateTimeField(auto_now_add=True)
