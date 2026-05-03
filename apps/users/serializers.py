@@ -210,11 +210,11 @@ class UserBadgeInfoSerializer(serializers.ModelSerializer):
                 250: "Mixelo",
             },
             "EXPLORER": {
-                20: "Bronze",
-                30: "Silver",
-                40: "Gold",
-                55: "Obsidian",
-                70: "Mixelo",
+                15: "Bronze",
+                50: "Silver",
+                100: "Gold",
+                200: "Obsidian",
+                400: "Mixelo",
             },
         }
 
@@ -232,21 +232,28 @@ class UserBadgeInfoSerializer(serializers.ModelSerializer):
                 liked=True,
             ).count(),
             "COLLABORATOR": obj.comment_set.count(),
-            "EXPLORER": (UserStoryView.objects.filter(user=obj).count() / max(Story.objects.count(), 1)) * 100,
+            "EXPLORER": UserStoryView.objects.filter(user=obj).count(),
         }
+        earned_set = set(UserBadge.objects.filter(user=obj).values_list("badge_type", "level"))
+        earned_current = {}
         for badge_type, levels in badge_requirements.items():
-            current_level = (0, None)
+            for requirement, level in levels.items():
+                if (badge_type, level) in earned_set:
+                    earned_current[badge_type] = (requirement, level)
+
+        for badge_type, levels in badge_requirements.items():
+            current_level = earned_current.get(badge_type, (0, None))
+
             next_level = None
             for requirement, level in levels.items():
-                if user_progress[badge_type] >= requirement:
-                    current_level = (requirement, level)
-                else:
+                if requirement > current_level[0]:
                     next_level = (requirement, level)
                     break
+
             if next_level is not None:
-                progress = user_progress[badge_type] - current_level[0]
+                progress = max(user_progress[badge_type] - current_level[0], 0)
                 section = next_level[0] - current_level[0]
-                percentage = (progress / section) * 100
+                percentage = min((progress / section) * 100, 100)
                 next_levels[badge_type] = {"next_level": next_level[1], "percentage": round(percentage, 2)}
             else:
                 next_levels[badge_type] = {"next_level": None, "percentage": 100}
