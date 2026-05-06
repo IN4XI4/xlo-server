@@ -10,6 +10,8 @@ class AssessmentSerializer(serializers.ModelSerializer):
     user_last_name = serializers.ReadOnlyField(source="user.last_name")
     topic_name = serializers.ReadOnlyField(source="topic.title")
     topic_image = serializers.ImageField(source="topic.image", required=False, allow_null=True, use_url=True)
+    user_avatar = serializers.ImageField(source="user.profile_picture", required=False, allow_null=True, use_url=True)
+    is_approved = serializers.SerializerMethodField()
 
     class Meta:
         model = Assessment
@@ -23,6 +25,12 @@ class AssessmentSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
+
+    def get_is_approved(self, obj):
+        user = self.context["request"].user
+        if user.is_authenticated:
+            return Attempt.objects.filter(user=user, assessment=obj, approved=True).exists()
+        return False
 
 
 class AssessmentDetailSerializer(serializers.ModelSerializer):
