@@ -151,19 +151,24 @@ class AttemptViewSet(viewsets.ModelViewSet):
             .order_by("-points_obtained")
             .first()
         )
-        user_points, created = UserPoints.objects.get_or_create(
-            user=attempt.user, category=attempt.assessment.topic, defaults={"total_points": 0}
-        )
+        user_points = None
+        if attempt.assessment.topic:
+            user_points, created = UserPoints.objects.get_or_create(
+                user=attempt.user, category=attempt.assessment.topic, defaults={"total_points": 0}
+            )
         if not best_attempt or attempt.points_obtained > best_attempt.points_obtained:
             if best_attempt:
                 difference = attempt.points_obtained - best_attempt.points_obtained
                 attempt.user.points += difference
-                user_points.total_points += difference
+                if user_points:
+                    user_points.total_points += difference
             else:
                 attempt.user.points += attempt.points_obtained
-                user_points.total_points += attempt.points_obtained
+                if user_points:
+                    user_points.total_points += attempt.points_obtained
             attempt.user.save()
-            user_points.save()
+            if user_points:
+                user_points.save()
         attempt.is_finished = True
         attempt.save()
         self.update_user_average_score(attempt.user, user_points)
