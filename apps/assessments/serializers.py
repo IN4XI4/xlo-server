@@ -37,6 +37,7 @@ class AssessmentDetailSerializer(serializers.ModelSerializer):
     user_username = serializers.ReadOnlyField(source="user.username")
     user_first_name = serializers.ReadOnlyField(source="user.first_name")
     user_last_name = serializers.ReadOnlyField(source="user.last_name")
+    user_avatar = serializers.ImageField(source="user.profile_picture", required=False, allow_null=True, use_url=True)
     topic_name = serializers.ReadOnlyField(source="topic.title")
     category_name = serializers.ReadOnlyField(source="topic.tag.name")
     followers_count = serializers.SerializerMethodField()
