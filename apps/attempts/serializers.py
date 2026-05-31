@@ -8,6 +8,10 @@ class AttemptSerializer(serializers.ModelSerializer):
     assessment_name = serializers.ReadOnlyField(source="assessment.name")
     assessment_min_score = serializers.ReadOnlyField(source="assessment.min_score")
     assessment_number_of_questions = serializers.ReadOnlyField(source="assessment.number_of_questions")
+    assessment_image = serializers.ImageField(source="assessment.image", read_only=True, use_url=True)
+    assessment_author_first_name = serializers.ReadOnlyField(source="assessment.user.first_name")
+    assessment_author_last_name = serializers.ReadOnlyField(source="assessment.user.last_name")
+    assessment_author_username = serializers.ReadOnlyField(source="assessment.user.username")
 
     class Meta:
         model = Attempt
