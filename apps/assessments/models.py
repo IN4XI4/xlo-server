@@ -62,6 +62,16 @@ class Assessment(models.Model):
     average_score = models.FloatField(null=True, blank=True)
     attempts_count = models.IntegerField(default=0)
 
+    def get_available_attempts(self, user):
+        if not user.is_authenticated:
+            return 0
+        if self.user == user:
+            return 0
+        attempts = self.attempts.filter(user=user)
+        if attempts.filter(score=100).exists():
+            return 0
+        return self.allowed_attempts - attempts.count()
+
     def __str__(self):
         return self.name
 

@@ -18,6 +18,10 @@ class Attempt(models.Model):
     end_time = models.DateTimeField(null=True, blank=True)
     points_obtained = models.IntegerField(default=0)
 
+    @property
+    def correct_answers_count(self):
+        return self.question_attempts.filter(is_correct=True).count()
+
     def __str__(self):
         return f"Attempt by {self.user.username} on {self.assessment.name} - Score: {self.score}"
 
