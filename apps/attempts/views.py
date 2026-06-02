@@ -10,7 +10,12 @@ from rest_framework.serializers import ValidationError
 from rest_framework.views import APIView
 
 from apps.attempts.models import Attempt, QuestionAttempt, UserPoints
-from apps.attempts.serializers import AttemptSerializer, QuestionAttemptSerializer, UserPointsSerializer
+from apps.attempts.serializers import (
+    AttemptListSerializer,
+    AttemptDetailSerializer,
+    QuestionAttemptSerializer,
+    UserPointsSerializer,
+)
 from apps.attempts.permissions import AttemptBasedPermissions
 from apps.attempts.services import process_finalization, update_assessment_average_score, update_user_average_score
 from apps.attempts.tasks import finalize_expired_attempt
@@ -19,7 +24,6 @@ from apps.assessments.models import Assessment, Question, Choice
 
 class AttemptViewSet(viewsets.ModelViewSet):
     permission_classes = [AttemptBasedPermissions]
-    serializer_class = AttemptSerializer
     filterset_fields = {
         "assessment": ("exact", "in"),
         "user": ("exact", "in"),
@@ -29,6 +33,11 @@ class AttemptViewSet(viewsets.ModelViewSet):
     }
     ordering_fields = ["start_time"]
     ordering = ["start_time"]
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return AttemptDetailSerializer
+        return AttemptListSerializer
 
     def get_queryset(self):
         if self.request.user.is_authenticated:
@@ -95,6 +104,9 @@ class AttemptViewSet(viewsets.ModelViewSet):
                     "score": attempt.score,
                     "approved": attempt.approved,
                     "points_obtained": attempt.points_obtained,
+                    "end_time": attempt.end_time,
+                    "correct_answers_count": attempt.question_attempts.filter(is_correct=True).count(),
+                    "available_attempts": attempt.assessment.get_available_attempts(request.user),
                 },
                 status=status.HTTP_200_OK,
             )
@@ -117,6 +129,9 @@ class AttemptViewSet(viewsets.ModelViewSet):
                 "score": attempt.score,
                 "approved": attempt.approved,
                 "points_obtained": attempt.points_obtained,
+                "end_time": attempt.end_time,
+                "correct_answers_count": attempt.question_attempts.filter(is_correct=True).count(),
+                "available_attempts": attempt.assessment.get_available_attempts(request.user),
             },
             status=status.HTTP_200_OK,
         )

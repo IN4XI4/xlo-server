@@ -6,7 +6,7 @@ from django.utils import timezone
 def calculate_points(assessment, score):
     D_teacher = assessment.difficulty
     D_students = assessment.user_difficulty_rating or D_teacher
-    return score * ((D_teacher + D_students) / 20.0)
+    return round(score * ((D_teacher + D_students) / 20.0))
 
 
 def update_assessment_average_score(assessment):
@@ -65,14 +65,16 @@ def process_finalization(attempt, answers):
         correct_answers_count = attempt.question_attempts.filter(is_correct=True).count()
         attempt.score = (correct_answers_count / total_questions) * 100 if total_questions else 0
         attempt.approved = attempt.score >= attempt.assessment.min_score
-        attempt.points_obtained = calculate_points(attempt.assessment, attempt.score)
-
         best_attempt = (
             Attempt.objects.filter(assessment=attempt.assessment, user=attempt.user)
             .exclude(pk=attempt.pk)
-            .order_by("-points_obtained")
+            .order_by("-score")
             .first()
         )
+
+        raw_points = calculate_points(attempt.assessment, attempt.score)
+        best_raw = calculate_points(attempt.assessment, best_attempt.score) if best_attempt else 0
+        attempt.points_obtained = max(0, raw_points - best_raw)
 
         user_points = None
         if attempt.assessment.topic:
@@ -80,16 +82,10 @@ def process_finalization(attempt, answers):
                 user=attempt.user, category=attempt.assessment.topic, defaults={"total_points": 0}
             )
 
-        if not best_attempt or attempt.points_obtained > best_attempt.points_obtained:
-            if best_attempt:
-                difference = attempt.points_obtained - best_attempt.points_obtained
-                attempt.user.points += difference
-                if user_points:
-                    user_points.total_points += difference
-            else:
-                attempt.user.points += attempt.points_obtained
-                if user_points:
-                    user_points.total_points += attempt.points_obtained
+        if attempt.points_obtained > 0:
+            attempt.user.points += attempt.points_obtained
+            if user_points:
+                user_points.total_points += attempt.points_obtained
             attempt.user.save()
             if user_points:
                 user_points.save()

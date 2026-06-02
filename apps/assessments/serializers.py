@@ -54,15 +54,7 @@ class AssessmentDetailSerializer(serializers.ModelSerializer):
         return FollowAssessment.objects.filter(assessment=obj, follower__is_active=True).count()
 
     def get_available_attempts(self, obj):
-        user = self.context["request"].user
-        if user.is_authenticated:
-            if obj.user == user:
-                return 0
-            attempts = Attempt.objects.filter(user=user, assessment=obj)
-            if attempts.filter(score=100).exists():
-                return 0
-            return obj.allowed_attempts - attempts.count()
-        return 0
+        return obj.get_available_attempts(self.context["request"].user)
 
     def get_is_owner(self, obj):
         user = self.context["request"].user
@@ -152,8 +144,4 @@ class FollowAssessmentSerializer(serializers.ModelSerializer):
         return None
 
     def get_available_attempts(self, obj):
-        user = self.context["request"].user
-        if user.is_authenticated:
-            attempts_made = Attempt.objects.filter(user=user, assessment=obj.assessment).count()
-            return obj.assessment.allowed_attempts - attempts_made
-        return 0
+        return obj.assessment.get_available_attempts(self.context["request"].user)
