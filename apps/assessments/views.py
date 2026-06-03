@@ -3,6 +3,7 @@ from django.db.models import Q, Count, Avg, Case, When, IntegerField
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
 from apps.assessments.models import Assessment, Question, Choice, AssessmentDifficultyRating, FollowAssessment
@@ -24,6 +25,11 @@ from apps.assessments.permissions import (
 from apps.attempts.models import Attempt
 
 
+class AssessmentPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+
+
 def validate_question(question):
     total_choices = question.choices.count()
     correct_choices = question.choices.filter(correct_answer=True).count()
@@ -43,6 +49,7 @@ def validate_question(question):
 class AssessmentViewSet(viewsets.ModelViewSet):
     permission_classes = [AssessmentPermissions]
     serializer_class = AssessmentSerializer
+    pagination_class = AssessmentPagination
     filterset_fields = {
         "name": ("exact", "icontains"),
         "user": ("exact", "in"),
