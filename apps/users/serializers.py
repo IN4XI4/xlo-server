@@ -141,6 +141,8 @@ class ReadOnlyUserSerializer(serializers.ModelSerializer):
     picture = serializers.SerializerMethodField()
     country = CountryField(name_only=True)
     country_flag = serializers.SerializerMethodField()
+    birth_year = serializers.SerializerMethodField()
+    badges_count = serializers.SerializerMethodField()
 
     class Meta:
         model = get_user_model()
@@ -154,6 +156,10 @@ class ReadOnlyUserSerializer(serializers.ModelSerializer):
             "points",
             "average_score",
             "picture",
+            "birth_year",
+            "profession",
+            "level",
+            "badges_count",
         ]
 
     def get_picture(self, obj):
@@ -161,13 +167,19 @@ class ReadOnlyUserSerializer(serializers.ModelSerializer):
             request = self.context.get("request")
             return request.build_absolute_uri(obj.profile_picture.url)
         return None
-    
+
     def get_country_flag(self, obj):
         request = self.context.get("request")
         if obj.country and request:
             flag_url = obj.country.flag
             return request.build_absolute_uri(flag_url)
         return None
+
+    def get_birth_year(self, obj):
+        return obj.birthday.year if obj.birthday else None
+
+    def get_badges_count(self, obj):
+        return obj.badges.count()
 
 
 class UserBadgeInfoSerializer(serializers.ModelSerializer):

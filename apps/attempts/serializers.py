@@ -57,15 +57,37 @@ class QuestionAttemptSerializer(serializers.ModelSerializer):
 class UserPointsSerializer(serializers.ModelSerializer):
     country = serializers.SerializerMethodField()
     country_flag = serializers.SerializerMethodField()
+    user_id = serializers.ReadOnlyField(source="user.id")
     first_name = serializers.ReadOnlyField(source="user.first_name")
     last_name = serializers.ReadOnlyField(source="user.last_name")
+    picture = serializers.SerializerMethodField()
+    birth_year = serializers.SerializerMethodField()
+    profession = serializers.ReadOnlyField(source="user.profession")
+    level = serializers.ReadOnlyField(source="user.level")
+    badges_count = serializers.SerializerMethodField()
 
     class Meta:
         model = UserPoints
-        fields = "__all__"
+        fields = [
+            "id",
+            "user",
+            "user_id",
+            "category",
+            "total_points",
+            "average_score",
+            "first_name",
+            "last_name",
+            "country",
+            "country_flag",
+            "picture",
+            "birth_year",
+            "profession",
+            "level",
+            "badges_count",
+        ]
 
     def get_country(self, obj):
-        return obj.user.country.name
+        return obj.user.country.name if obj.user.country else None
 
     def get_country_flag(self, obj):
         request = self.context.get("request")
@@ -73,3 +95,15 @@ class UserPointsSerializer(serializers.ModelSerializer):
             flag_url = obj.user.country.flag
             return request.build_absolute_uri(flag_url)
         return None
+
+    def get_picture(self, obj):
+        if obj.user.profile_picture:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.user.profile_picture.url)
+        return None
+
+    def get_birth_year(self, obj):
+        return obj.user.birthday.year if obj.user.birthday else None
+
+    def get_badges_count(self, obj):
+        return obj.user.badges.count()

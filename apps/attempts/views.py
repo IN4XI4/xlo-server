@@ -5,6 +5,7 @@ from django.db.models import Q, Prefetch
 from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.serializers import ValidationError
 from rest_framework.views import APIView
@@ -172,9 +173,14 @@ class GlobalStatsAPIView(APIView):
         return Response(stats_data, status=status.HTTP_200_OK)
 
 
+class RankingPagination(PageNumberPagination):
+    page_size = 15
+
+
 class UserPointsViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = UserPoints.objects.all()
     serializer_class = UserPointsSerializer
+    pagination_class = RankingPagination
     filterset_fields = {
         "user": ("exact", "in"),
         "category": ("exact", "in"),
@@ -182,3 +188,12 @@ class UserPointsViewSet(viewsets.ReadOnlyModelViewSet):
         "average_score": ("gte", "lte"),
     }
     ordering_fields = ["total_points", "average_score"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        search = self.request.query_params.get("search", "").strip()
+        if search:
+            qs = qs.filter(
+                Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search)
+            )
+        return qs

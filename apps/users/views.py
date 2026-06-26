@@ -8,10 +8,12 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.mail import send_mail
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.storage import default_storage
+from django.db.models import Q
 from django.utils.timezone import now
 from django_countries import countries
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -200,15 +202,29 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response({"message": "Password updated successfully."})
 
 
+class RankingPagination(PageNumberPagination):
+    page_size = 15
+
+
 class ReadOnlyUserViewSet(viewsets.ModelViewSet):
     serializer_class = ReadOnlyUserSerializer
     queryset = CustomUser.objects.all()
+    pagination_class = RankingPagination
     filterset_fields = {
         "username": ("exact", "in", "icontains"),
         "average_score": ("exact", "gte", "lte"),
         "points": ("exact", "gte", "lte"),
     }
     ordering_fields = ["points", "average_score"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        search = self.request.query_params.get("search", "").strip()
+        if search:
+            qs = qs.filter(
+                Q(first_name__icontains=search) | Q(last_name__icontains=search)
+            )
+        return qs
 
 
 class UserBadgeViewSet(viewsets.ModelViewSet):
