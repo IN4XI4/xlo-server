@@ -6,6 +6,7 @@ django-cors-headers==4.3.0
 django-countries==7.5.1
 django-filter==23.3
 djangorestframework==3.14.0
+google-auth==2.35.0
 Pillow==10.1.0
 psycopg2==2.9.9
 redis==5.0.4

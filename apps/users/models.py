@@ -67,6 +67,7 @@ class CustomUser(AbstractUser):
     country = CountryField(blank=True, null=True)
     reset_code = models.CharField(max_length=50, null=True, blank=True)
     active_days = models.IntegerField(default=0)
+    google_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
 
     # Settings fields:
     show_info = models.BooleanField(default=True)  # Shows detailed profile info to others

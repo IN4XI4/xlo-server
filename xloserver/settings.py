@@ -52,6 +52,9 @@ ALLOWED_HOSTS = ["api.mixelo.io", "15.237.210.201", "localhost", "127.0.0.1"]
 STRIPE_SECRET_KEY = get_secret("STRIPE_SECRET_KEY")
 STRIPE_WEBHOOK_SECRET = get_secret("STRIPE_WEBHOOK_SECRET")
 
+# Google OAuth
+GOOGLE_OAUTH_CLIENT_ID = get_secret("GOOGLE_OAUTH_CLIENT_ID")
+
 
 # Application definition
 
