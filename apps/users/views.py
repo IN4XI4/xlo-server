@@ -11,7 +11,10 @@ from django.core.files.storage import default_storage
 from django.db.models import Q
 from django.utils.timezone import now
 from django_countries import countries
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 from rest_framework import viewsets, status
+from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
@@ -36,6 +39,7 @@ from apps.users.serializers import (
     UserBadgeSerializer,
     FollowSerializer,
 )
+from apps.users.utils import generate_unique_username
 
 
 class CountryListView(APIView):
@@ -129,6 +133,43 @@ class UserViewSet(viewsets.ModelViewSet):
             user.save()
             return Response({"message": "Password reset successfully.", "email": user.email})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=["post"], url_path="google_login")
+    def google_login(self, request):
+        token = request.data.get("id_token")
+        if not token:
+            return Response({"error": "id_token is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            payload = google_id_token.verify_oauth2_token(
+                token, google_requests.Request(), settings.GOOGLE_OAUTH_CLIENT_ID
+            )
+        except ValueError:
+            return Response({"error": "Invalid Google token."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if not payload.get("email_verified"):
+            return Response({"error": "Google email is not verified."}, status=status.HTTP_400_BAD_REQUEST)
+
+        email = payload["email"]
+        google_sub = payload["sub"]
+
+        user = CustomUser.objects.filter(email__iexact=email).first()
+        if user is None:
+            user = CustomUser.objects.create(
+                username=generate_unique_username(email),
+                email=email,
+                first_name=payload.get("given_name", ""),
+                last_name=payload.get("family_name", ""),
+                google_id=google_sub,
+            )
+            user.set_unusable_password()
+            user.save(update_fields=["password"])
+        elif not user.google_id:
+            user.google_id = google_sub
+            user.save(update_fields=["google_id"])
+
+        auth_token, _ = Token.objects.get_or_create(user=user)
+        return Response({"token": auth_token.key})
 
     @action(detail=False, methods=["get"], url_path="me")
     def me(self, request, *args, **kwargs):

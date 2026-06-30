@@ -1,3 +1,6 @@
+import re
+import uuid
+
 from xloserver.constants import USER_LEVELS, ACTIVITY_POINT_ACTIONS
 
 
@@ -19,3 +22,16 @@ def award_activity_points(user, action_key):
         return
 
     process_activity_points.delay(user.id, action_key)
+
+
+def generate_unique_username(email):
+    """
+    Derives a Django-valid, unique username from an email's local part.
+    """
+    from apps.users.models import CustomUser
+
+    base = re.sub(r"[^\w.@+-]", "", email.split("@")[0]) or "user"
+    username = base
+    while CustomUser.objects.filter(username=username).exists():
+        username = f"{base}_{uuid.uuid4().hex[:6]}"
+    return username
