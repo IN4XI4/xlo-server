@@ -80,6 +80,7 @@ class AttemptViewSet(viewsets.ModelViewSet):
                 {
                     "question_id": q.id,
                     "description": q.description,
+                    "is_multiple_choice": q.is_multiple_choice,
                     "choices": [
                         {"choice_id": c.id, "description": c.description}
                         for c in random.sample(q.fetched_choices, len(q.fetched_choices))
