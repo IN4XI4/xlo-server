@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import Q, Count, Avg, Case, When, IntegerField
+from django.db.models import Q, Count, Avg, Case, When, IntegerField, Exists, OuterRef
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -74,9 +74,21 @@ class AssessmentViewSet(viewsets.ModelViewSet):
         return AssessmentSerializer
 
     def get_queryset(self):
-        if self.request.user.is_authenticated:
-            return Assessment.objects.filter(Q(is_private=False) | Q(user=self.request.user)).order_by("id")
-        return Assessment.objects.filter(is_private=False, is_active=True).order_by("id")
+        presented_param = self.request.query_params.get("presented")
+
+        if not self.request.user.is_authenticated:
+            qs = Assessment.objects.filter(is_private=False, is_active=True).order_by("id")
+            if presented_param is not None and presented_param.lower() in ("true", "1", "yes"):
+                return qs.none()
+            return qs
+
+        qs = Assessment.objects.filter(Q(is_private=False) | Q(user=self.request.user)).order_by("id")
+        if presented_param is not None:
+            presented = presented_param.lower() in ("true", "1", "yes")
+            has_attempt = Exists(Attempt.objects.filter(assessment=OuterRef("pk"), user=self.request.user))
+            qs = qs.annotate(has_attempt=has_attempt).filter(has_attempt=presented)
+
+        return qs
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

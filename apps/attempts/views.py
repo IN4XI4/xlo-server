@@ -194,7 +194,8 @@ class UserPointsViewSet(viewsets.ReadOnlyModelViewSet):
         qs = super().get_queryset()
         search = self.request.query_params.get("search", "").strip()
         if search:
-            qs = qs.filter(
-                Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search)
-            )
+            qs = qs.filter(Q(user__first_name__icontains=search) | Q(user__last_name__icontains=search))
+
+        qs = qs.filter(total_points__gt=0)
+
         return qs
