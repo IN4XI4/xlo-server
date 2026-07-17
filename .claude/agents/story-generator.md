@@ -28,32 +28,34 @@ Stories on Mixelo are personal learning units. Each story is organized into **ca
 
 Use the exact ID when setting the `topic` field.
 
-| ID  | Title                                      |
-|-----|--------------------------------------------|
-| 20  | Understanding how the universe works       |
-| 22  | Innovation in motion                       |
-| 23  | Earth forces and shapes                    |
-| 24  | The building blocks of life                |
-| 25  | The principles of matter and energy        |
-| 26  | Solving the puzzle                         |
-| 27  | The precision of numbers                   |
-| 28  | Patterns and systems                       |
-| 29  | Dimensions and data in perspective         |
-| 30  | Echoes of the ancients                     |
-| 31  | Civilization: blueprints                   |
-| 32  | The pursuit of inner peace                 |
-| 33  | Current global issues                      |
-| 34  | Understanding and solving social challenges|
-| 35  | Artistic expression and design             |
-| 36  | The storyteller's vault                    |
-| 37  | Symphony of inspiration                    |
-| 38  | Media and technology in creativity         |
-| 39  | Mother nature                              |
-| 40  | Living in harmony                          |
-| 49  | How can I rise my mood?                    |
-| 50  | I am seeking for clarity!                  |
-| 51  | I want to reach my goals!                  |
-| 52  | Bridging cultures                          |
+| ID  | Topic                                          | Category                             |
+|-----|-------------------------------------------------|---------------------------------------|
+| 22  | Programming Languages                           | Computer Science and Technology        |
+| 25  | Chemistry                                       | Science, Mathematics and Engineering   |
+| 27  | Physics                                         | Science, Mathematics and Engineering   |
+| 28  | Mathematics and Statistics                      | Science, Mathematics and Engineering   |
+| 29  | Engineering and Applied Sciences                | Science, Mathematics and Engineering   |
+| 30  | History                                         | Social Sciences and Humanities         |
+| 31  | Economics and Finance                           | Social Sciences and Humanities         |
+| 32  | I want to find inner peace                      | Emotional self-development             |
+| 33  | Political Science and Civics                    | Social Sciences and Humanities         |
+| 35  | Artificial Intelligence and Machine Learning    | Computer Science and Technology        |
+| 36  | The storytellers vault                          | Social Sciences and Humanities         |
+| 38  | Cybersecurity and Networking                    | Computer Science and Technology        |
+| 39  | Biology and Life Sciences                       | Science, Mathematics and Engineering   |
+| 40  | Business and Management                         | Social Sciences and Humanities         |
+| 49  | How can I rise my mood?                         | Emotional self-development             |
+| 50  | I am seeking for clarity!                       | Emotional self-development             |
+| 51  | I want to reach my goals!                       | Emotional self-development             |
+| 53  | English                                         | Languages                              |
+| 54  | French                                          | Languages                              |
+| 55  | Spanish                                         | Languages                              |
+| 56  | German                                          | Languages                              |
+| 57  | Italian                                         | Languages                              |
+| 58  | Other languages                                 | Languages                              |
+| 59  | Geography                                       | Social Sciences and Humanities         |
+| 60  | Web and Mobile Development                      | Computer Science and Technology        |
+| 61  | Databases                                       | Computer Science and Technology        |
 
 `topic` is required. Always choose the closest match from the table above.
 
@@ -296,7 +298,7 @@ Format: `<topic_slug>_<soft_skill_slug>_d<difficulty>.json`
 Examples:
 - `storytellers_vault_resilience_d2.json`
 - `inner_peace_stress_management_d3.json`
-- `solving_puzzle_problem_solving_d4.json`
+- `web_mobile_development_problem_solving_d4.json`
 
 Rules:
 - Topic slug: lowercase, underscores, max 4 words
@@ -308,7 +310,7 @@ Rules:
 ## EXAMPLE INVOCATIONS
 
 - "Create a story about overcoming procrastination, difficulty 3"
-- "Generate a story for topic 32 (inner peace) focused on resilience"
+- "Generate a story for topic 32 (I want to find inner peace) focused on resilience"
 - "Write a story about a team conflict that teaches communication skills"
 - "Story about a young entrepreneur failing and recovering, difficulty 4, in Spanish"
 - "Create a story about learning to say no, for people aged 20–30"

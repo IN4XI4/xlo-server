@@ -2,6 +2,9 @@
 /docs/json_assessments/
 /docs/json_stories/
 
+# Flag images generated for topic thumbnails
+/docs/flags/
+
 # Django project
 /media/
 /static/

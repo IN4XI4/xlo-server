@@ -24,32 +24,34 @@ This agent generates assessments for the Mixelo learning platform. Users complet
 
 ### Available Topics (use the exact ID when setting the `topic` field)
 
-| ID  | Title                                      |
-|-----|--------------------------------------------|
-| 20  | Understanding how the universe works       |
-| 22  | Innovation in motion                       |
-| 23  | Earth forces and shapes                    |
-| 24  | The building blocks of life                |
-| 25  | The principles of matter and energy        |
-| 26  | Solving the puzzle                         |
-| 27  | The precision of numbers                   |
-| 28  | Patterns and systems                       |
-| 29  | Dimensions and data in perspective         |
-| 30  | Echoes of the ancients                     |
-| 31  | Civilization: blueprints                   |
-| 32  | The pursuit of inner peace                 |
-| 33  | Current global issues                      |
-| 34  | Understanding and solving social challenges|
-| 35  | Artistic expression and design             |
-| 36  | The storyteller's vault                    |
-| 37  | Symphony of inspiration                    |
-| 38  | Media and technology in creativity         |
-| 39  | Mother nature                              |
-| 40  | Living in harmony                          |
-| 49  | How can I rise my mood?                    |
-| 50  | I am seeking for clarity!                  |
-| 51  | I want to reach my goals!                  |
-| 52  | Bridging cultures                          |
+| ID  | Topic                                          | Category                             |
+|-----|-------------------------------------------------|---------------------------------------|
+| 22  | Programming Languages                           | Computer Science and Technology        |
+| 25  | Chemistry                                       | Science, Mathematics and Engineering   |
+| 27  | Physics                                         | Science, Mathematics and Engineering   |
+| 28  | Mathematics and Statistics                      | Science, Mathematics and Engineering   |
+| 29  | Engineering and Applied Sciences                | Science, Mathematics and Engineering   |
+| 30  | History                                         | Social Sciences and Humanities         |
+| 31  | Economics and Finance                           | Social Sciences and Humanities         |
+| 32  | I want to find inner peace                      | Emotional self-development             |
+| 33  | Political Science and Civics                    | Social Sciences and Humanities         |
+| 35  | Artificial Intelligence and Machine Learning    | Computer Science and Technology        |
+| 36  | The storytellers vault                          | Social Sciences and Humanities         |
+| 38  | Cybersecurity and Networking                    | Computer Science and Technology        |
+| 39  | Biology and Life Sciences                       | Science, Mathematics and Engineering   |
+| 40  | Business and Management                         | Social Sciences and Humanities         |
+| 49  | How can I rise my mood?                         | Emotional self-development             |
+| 50  | I am seeking for clarity!                       | Emotional self-development             |
+| 51  | I want to reach my goals!                       | Emotional self-development             |
+| 53  | English                                         | Languages                              |
+| 54  | French                                          | Languages                              |
+| 55  | Spanish                                         | Languages                              |
+| 56  | German                                          | Languages                              |
+| 57  | Italian                                         | Languages                              |
+| 58  | Other languages                                 | Languages                              |
+| 59  | Geography                                       | Social Sciences and Humanities         |
+| 60  | Web and Mobile Development                      | Computer Science and Technology        |
+| 61  | Databases                                       | Computer Science and Technology        |
 
 If the requested subject does not clearly match any topic, set `"topic": null`.
 
@@ -100,6 +102,7 @@ The structure must follow this schema exactly:
 - `difficulty` is a float between **1.0 and 10.0** (e.g., `3.5`, `7.0`).
 - `spaces` is always `[]`.
 - `is_private` is always `false`.
+- Both the question `description` and each choice `description` accept **Markdown formatting** (bold, italics, code spans, lists, etc.). Use it when it improves clarity — e.g. `` `code` `` for code snippets, **bold** to emphasize a key term.
 
 ---
 
@@ -184,9 +187,9 @@ If the user provides partial instructions (e.g., only a topic), proceed with def
 Use the format: `<topic_slug>_d<difficulty>_<n>q.json`
 
 Examples:
-- `building_blocks_of_life_d6.0_10q.json`
-- `current_global_issues_d8.5_15q.json`
-- `precision_of_numbers_d3.0_8q.json`
+- `biology_life_sciences_d6.0_10q.json`
+- `political_science_civics_d8.5_15q.json`
+- `mathematics_statistics_d3.0_8q.json`
 
 Rules:
 - Topic slug: lowercase, words separated by underscores, max 5 words
@@ -199,7 +202,7 @@ Rules:
 ## EXAMPLE INVOCATIONS
 
 - "Create an assessment on photosynthesis, difficulty 6, 10 questions"
-- "Generate a quiz for topic 27 (The precision of numbers), beginner level"
-- "Make a hard assessment about current global issues, 15 questions"
-- "Assessment on the building blocks of life, difficulty 8.5, 12 questions, 2 allowed attempts"
-- "Create an assessment in Spanish about the building blocks of life, difficulty 5, 8 questions"
+- "Generate a quiz for topic 28 (Mathematics and Statistics), beginner level"
+- "Make a hard assessment about political science and civics, 15 questions"
+- "Assessment on biology and life sciences, difficulty 8.5, 12 questions, 2 allowed attempts"
+- "Create an assessment in Spanish about biology and life sciences, difficulty 5, 8 questions"
