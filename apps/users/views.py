@@ -262,9 +262,10 @@ class ReadOnlyUserViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         search = self.request.query_params.get("search", "").strip()
         if search:
-            qs = qs.filter(
-                Q(first_name__icontains=search) | Q(last_name__icontains=search)
-            )
+            qs = qs.filter(Q(first_name__icontains=search) | Q(last_name__icontains=search))
+
+        qs = qs.filter(points__gt=0)
+
         return qs
 
 
