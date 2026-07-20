@@ -59,6 +59,7 @@ from .serializers import (
 from .tasks import send_like_email, send_new_stories_email, send_ask_for_help_email
 from .filters import UserOwnedFilterBackend
 from apps.base.models import Topic
+from apps.spaces.models import Space
 from apps.users.utils import award_activity_points
 
 
@@ -127,10 +128,20 @@ class StoriesViewSet(viewsets.ModelViewSet):
         - QuerySet: A queryset of Story objects.
         """
         user = self.request.user
-        queryset = Story.objects.filter(is_active=True)
+        queryset = Story.objects.filter(is_active=True).select_related(
+            "topic", "topic__tag", "user", "user__profile_color"
+        ).prefetch_related("spaces")
+
+        space_id = self.request.query_params.get("spaces")
+        if space_id:
+            if Space.user_is_member(user, space_id):
+                return queryset.filter(spaces__id=space_id).distinct()
 
         if user.is_authenticated:
-            queryset = queryset.filter(Q(is_private=False) | Q(user=user))
+            visibility = Q(is_private=False) | Q(user=user)
+            if self.action in ("retrieve", "find_by_slug"):
+                visibility |= Q(spaces__owner=user) | Q(spaces__admins=user) | Q(spaces__members=user)
+            queryset = queryset.filter(visibility).distinct()
         else:
             queryset = queryset.filter(is_private=False, free_access=True)
 
@@ -191,7 +202,7 @@ class StoriesViewSet(viewsets.ModelViewSet):
         """
         Retrieve a topic by its slug, independent of its ID.
         """
-        story = get_object_or_404(Story, slug=slug)
+        story = get_object_or_404(self.get_queryset(), slug=slug)
         if not story.free_access and not request.user.is_authenticated:
             return Response(
                 {"detail": "Authentication credentials were not provided or are invalid."},
