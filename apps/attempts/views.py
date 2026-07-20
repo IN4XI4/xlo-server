@@ -54,6 +54,13 @@ class AttemptViewSet(viewsets.ModelViewSet):
         if assessment.user == self.request.user:
             raise ValidationError("You cannot attempt your own assessment.")
 
+        if assessment.is_private:
+            is_space_member = assessment.spaces.filter(
+                Q(owner=self.request.user) | Q(admins=self.request.user) | Q(members=self.request.user)
+            ).exists()
+            if not is_space_member:
+                raise ValidationError("You do not have permission to attempt this assessment.")
+
         previous_attempts_count = Attempt.objects.filter(assessment=assessment, user=self.request.user).count()
         perfect_score_exists = Attempt.objects.filter(assessment=assessment, user=self.request.user, score=100).exists()
         if previous_attempts_count >= assessment.allowed_attempts or perfect_score_exists:

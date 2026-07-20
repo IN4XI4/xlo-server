@@ -1,17 +1,29 @@
 from rest_framework import permissions
 
 from apps.assessments.models import Question, Choice
+from apps.users.utils import get_user_level
+from xloserver.constants import get_level
 
 
 class AssessmentPermissions(permissions.BasePermission):
+    creator_required_level = get_level("Contributor Lvl 2")
+
     def has_permission(self, request, view):
         if request.method in permissions.SAFE_METHODS:
             return True
 
         if request.method == "POST":
-            return request.user.is_authenticated
-        # TODO: Creator level 4 users are the only ones able to create assessments.
-        return True
+            if not request.user.is_authenticated:
+                return False
+            if view.action in ("create", "create_full"):
+                user_level, _ = get_user_level(request.user)
+                return (
+                    user_level >= self.creator_required_level
+                    or request.user.is_staff
+                    or request.user.is_superuser
+                )
+            return True
+        return request.user.is_authenticated
 
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
@@ -22,10 +34,7 @@ class AssessmentPermissions(permissions.BasePermission):
 
 class QuestionChoicePermissions(permissions.BasePermission):
     def has_permission(self, request, view):
-        if view.action == "create":
-            return request.user.is_authenticated
-
-        return True
+        return request.user.is_authenticated
 
     def has_object_permission(self, request, view, obj):
         if isinstance(obj, Question):
@@ -34,7 +43,7 @@ class QuestionChoicePermissions(permissions.BasePermission):
             owner = obj.question.assessment.user
         else:
             return False
-        return owner == request.user
+        return owner == request.user or request.user.is_staff or request.user.is_superuser
 
 
 class AssessmentDifficultyRatingPermissions(permissions.BasePermission):

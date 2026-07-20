@@ -41,6 +41,17 @@ class Space(models.Model):
                 self.slug = f"{original_slug}-{count}"
         super(Space, self).save(*args, **kwargs)
 
+    @classmethod
+    def user_is_member(cls, user, space_id):
+        """Whether `user` is the owner, an admin, or a member of the space with this id."""
+        if not user or not user.is_authenticated:
+            return False
+        return (
+            cls.objects.filter(id=space_id)
+            .filter(models.Q(owner=user) | models.Q(admins=user) | models.Q(members=user))
+            .exists()
+        )
+
 class MembershipRequest(models.Model):
     REQUEST_TYPE_CHOICES = [
         ("request", "User Request"),

@@ -3,6 +3,7 @@ from rest_framework import serializers
 
 from .models import TopicTag, Topic, SoftSkill, Mentor
 from apps.blog.models import Like, Card, UserCardView
+from apps.spaces.models import Space
 from apps.users.utils import get_user_level
 from xloserver.constants import get_level
 
@@ -25,10 +26,13 @@ class TopicReadOnlySerializer(serializers.ModelSerializer):
 
     def get_story_count(self, obj):
         space_id = self.context.get("space_id")
-        stories = obj.stories.filter(is_private=False)
+        user = self.context["request"].user
+
         if space_id:
-            stories = stories.filter(spaces__id=space_id)
-        return stories.count()
+            if Space.user_is_member(user, space_id):
+                return obj.stories.filter(spaces__id=space_id).distinct().count()
+
+        return obj.stories.filter(is_private=False).count()
 
 
 class TopicTagSerializer(serializers.ModelSerializer):

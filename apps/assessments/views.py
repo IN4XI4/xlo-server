@@ -23,6 +23,7 @@ from apps.assessments.permissions import (
     AssessmentDifficultyRatingPermissions,
 )
 from apps.attempts.models import Attempt
+from apps.spaces.models import Space
 
 
 class AssessmentPagination(PageNumberPagination):
@@ -74,18 +75,35 @@ class AssessmentViewSet(viewsets.ModelViewSet):
         return AssessmentSerializer
 
     def get_queryset(self):
+        user = self.request.user
         presented_param = self.request.query_params.get("presented")
 
-        if not self.request.user.is_authenticated:
-            qs = Assessment.objects.filter(is_private=False, is_active=True).order_by("id")
+        base_qs = Assessment.objects.select_related("user", "topic", "topic__tag").prefetch_related("spaces")
+
+        if user.is_authenticated:
+            qs = base_qs.filter(Q(is_active=True) | Q(user=user))
+        else:
+            qs = base_qs.filter(is_active=True)
+
+        space_id = self.request.query_params.get("spaces")
+        if space_id:
+            if Space.user_is_member(user, space_id):
+                return qs.filter(spaces__id=space_id).distinct().order_by("id")
+
+        if not user.is_authenticated:
+            qs = qs.filter(is_private=False).order_by("id")
             if presented_param is not None and presented_param.lower() in ("true", "1", "yes"):
                 return qs.none()
             return qs
 
-        qs = Assessment.objects.filter(Q(is_private=False) | Q(user=self.request.user)).order_by("id")
+        visibility = Q(is_private=False) | Q(user=user)
+        if self.action == "retrieve":
+            visibility |= Q(spaces__owner=user) | Q(spaces__admins=user) | Q(spaces__members=user)
+
+        qs = qs.filter(visibility).distinct().order_by("id")
         if presented_param is not None:
             presented = presented_param.lower() in ("true", "1", "yes")
-            has_attempt = Exists(Attempt.objects.filter(assessment=OuterRef("pk"), user=self.request.user))
+            has_attempt = Exists(Attempt.objects.filter(assessment=OuterRef("pk"), user=user))
             qs = qs.annotate(has_attempt=has_attempt).filter(has_attempt=presented)
 
         return qs
@@ -225,9 +243,12 @@ class QuestionViewSet(viewsets.ModelViewSet):
     }
 
     def get_queryset(self):
-        if self.request.user.is_authenticated:
-            return Question.objects.filter(assessment__user=self.request.user)
-        return Question.objects.none()
+        user = self.request.user
+        if not user.is_authenticated:
+            return Question.objects.none()
+        if user.is_staff or user.is_superuser:
+            return Question.objects.all()
+        return Question.objects.filter(assessment__user=user)
 
     def perform_create(self, serializer):
         assessment = self.request.data.get("assessment")
@@ -321,9 +342,12 @@ class ChoiceViewSet(viewsets.ModelViewSet):
     }
 
     def get_queryset(self):
-        if self.request.user.is_authenticated:
-            return Choice.objects.filter(question__assessment__user=self.request.user)
-        return Choice.objects.none()
+        user = self.request.user
+        if not user.is_authenticated:
+            return Choice.objects.none()
+        if user.is_staff or user.is_superuser:
+            return Choice.objects.all()
+        return Choice.objects.filter(question__assessment__user=user)
 
     def perform_create(self, serializer):
         """
@@ -360,6 +384,22 @@ class ChoiceViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_201_CREATED,
                 )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        if "question" in request.data:
+            try:
+                new_question = Question.objects.get(pk=request.data["question"])
+            except Question.DoesNotExist:
+                return Response(
+                    {"error": "The specified question does not exist."}, status=status.HTTP_400_BAD_REQUEST
+                )
+            if new_question.assessment.user != request.user:
+                return Response(
+                    {"error": "You can only change to questions that belong to you."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        return super(ChoiceViewSet, self).update(request, *args, **kwargs)
 
 
 class AssessmentDifficultyRatingViewSet(viewsets.ModelViewSet):
