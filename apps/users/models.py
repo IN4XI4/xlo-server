@@ -3,8 +3,9 @@ import os
 from django.db import models
 from xloserver.constants import ACTIVITY_POINT_ACTIONS
 from django.conf import settings
+from django.core.cache import cache
 from django.dispatch import receiver
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.contrib.auth.models import AbstractUser, UserManager
 from rest_framework.authtoken.models import Token
 from django_countries.fields import CountryField
@@ -50,6 +51,24 @@ class Experience(models.Model):
 
     def __str__(self):
         return str(self.experience)
+
+
+@receiver(post_save, sender=ProfileColor)
+@receiver(post_delete, sender=ProfileColor)
+def invalidate_profile_colors_cache(sender, **kwargs):
+    cache.delete("users:profile_colors")
+
+
+@receiver(post_save, sender=Gender)
+@receiver(post_delete, sender=Gender)
+def invalidate_genders_cache(sender, **kwargs):
+    cache.delete("users:genders")
+
+
+@receiver(post_save, sender=Experience)
+@receiver(post_delete, sender=Experience)
+def invalidate_experience_cache(sender, **kwargs):
+    cache.delete("users:experience")
 
 
 class CustomUser(AbstractUser):

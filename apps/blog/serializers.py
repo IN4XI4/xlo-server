@@ -153,6 +153,7 @@ class CardSerializer(serializers.ModelSerializer):
     mentor_profile = serializers.SerializerMethodField()
     mentor_picture = serializers.SerializerMethodField()
     user_has_recalled = serializers.SerializerMethodField()
+    owner_id = serializers.ReadOnlyField(source="story.user.id")
     owner_picture = serializers.FileField(
         source="story.user.profile_picture", required=False, allow_null=True, use_url=True
     )
@@ -283,6 +284,7 @@ class BlockDetailSerializer(serializers.ModelSerializer):
     mentor_picture = serializers.ImageField(source="card.mentor.picture", required=False, allow_null=True, use_url=True)
     user_has_liked = serializers.SerializerMethodField()
     user_has_recalled = serializers.SerializerMethodField()
+    owner_id = serializers.ReadOnlyField(source="card.story.user.id")
     owner_picture = serializers.ImageField(
         source="card.story.user.profile_picture", required=False, allow_null=True, use_url=True
     )
