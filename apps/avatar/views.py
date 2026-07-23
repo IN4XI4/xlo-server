@@ -67,6 +67,20 @@ class AvatarViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(avatar)
         return Response(serializer.data)
 
+    @action(detail=False, methods=["get"], url_path="user-avatar")
+    def get_user_avatar(self, request):
+        user_id = request.query_params.get("user_id")
+        if not user_id:
+            return Response({"detail": "user_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            avatar = Avatar.objects.get(user_id=user_id)
+        except Avatar.DoesNotExist:
+            return Response({"detail": "Avatar not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = self.get_serializer(avatar)
+        return Response(serializer.data)
+
 
 class UserUnlockedItemViewSet(viewsets.ReadOnlyModelViewSet):
 
