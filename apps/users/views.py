@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.mail import send_mail
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.storage import default_storage
@@ -42,9 +43,13 @@ from apps.users.serializers import (
 from apps.users.utils import generate_unique_username
 
 
+CATALOG_CACHE_TIMEOUT = 60 * 60 * 24  # 24h; invalidated early via post_save/post_delete signals
+
+
 class CountryListView(APIView):
     def get(self, request, *args, **kwargs):
-        return Response(countries)
+        data = cache.get_or_set("users:countries", lambda: list(countries), CATALOG_CACHE_TIMEOUT)
+        return Response(data)
 
 
 class ProfileColorViewSet(viewsets.ReadOnlyModelViewSet):
@@ -53,6 +58,14 @@ class ProfileColorViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     pagination_class = None
 
+    def list(self, request, *args, **kwargs):
+        data = cache.get_or_set(
+            "users:profile_colors",
+            lambda: self.get_serializer(self.get_queryset(), many=True).data,
+            CATALOG_CACHE_TIMEOUT,
+        )
+        return Response(data)
+
 
 class ExperienceViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Experience.objects.all().order_by("id")
@@ -60,12 +73,28 @@ class ExperienceViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
     pagination_class = None
 
+    def list(self, request, *args, **kwargs):
+        data = cache.get_or_set(
+            "users:experience",
+            lambda: self.get_serializer(self.get_queryset(), many=True).data,
+            CATALOG_CACHE_TIMEOUT,
+        )
+        return Response(data)
+
 
 class GenderViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Gender.objects.all().order_by("id")
     serializer_class = GenderSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None
+
+    def list(self, request, *args, **kwargs):
+        data = cache.get_or_set(
+            "users:genders",
+            lambda: self.get_serializer(self.get_queryset(), many=True).data,
+            CATALOG_CACHE_TIMEOUT,
+        )
+        return Response(data)
 
 
 class UserViewSet(viewsets.ModelViewSet):
