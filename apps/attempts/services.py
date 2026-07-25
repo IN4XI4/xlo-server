@@ -97,4 +97,9 @@ def process_finalization(attempt, answers):
         update_user_average_score(attempt.user, user_points)
         update_assessment_average_score(attempt.assessment)
 
+    if attempt.points_obtained > 0:
+        from apps.users.tasks import check_level_up
+
+        check_level_up.delay(attempt.user_id)
+
     return attempt
