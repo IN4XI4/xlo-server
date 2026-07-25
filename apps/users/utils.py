@@ -24,6 +24,55 @@ def award_activity_points(user, action_key):
     process_activity_points.delay(user.id, action_key)
 
 
+def apply_level_up_if_needed(user):
+    """
+    Recalculates the user's level from their current points. If they leveled up,
+    awards coins and creates a LEVEL_UP notification.
+
+    Callers must have already locked the user row (select_for_update) within an
+    atomic transaction, since level-up grants coins and must not be double-applied
+    under concurrent point-earning actions.
+    """
+    from apps.blog.models import Notification
+    from apps.wallet.models import CoinLedgerEntry
+
+    current_level = user.level
+    new_level = 0
+    for level_data in reversed(USER_LEVELS):
+        if user.points >= level_data["min_points"]:
+            new_level = level_data["level"]
+            break
+
+    if new_level <= current_level:
+        return
+
+    levels_gained = new_level - current_level
+    coins_to_award = levels_gained * 10
+
+    user.level = new_level
+    user.coin_balance = user.coin_balance + coins_to_award
+    user.save(update_fields=["level", "coin_balance"])
+
+    CoinLedgerEntry.objects.create(
+        user=user,
+        entry_type=CoinLedgerEntry.Type.CREDIT,
+        amount=coins_to_award,
+        reference_id="level_up",
+        idempotency_key=f"level_up_{user.id}_{current_level}_to_{new_level}",
+    )
+
+    new_level_name = USER_LEVELS[new_level]["name"]
+    Notification.objects.create(
+        user=user,
+        notification_type=Notification.Type.LEVEL_UP,
+        metadata={
+            "new_level": new_level,
+            "new_level_name": new_level_name,
+            "coins_awarded": coins_to_award,
+        },
+    )
+
+
 def generate_unique_username(email):
     """
     Derives a Django-valid, unique username from an email's local part.
