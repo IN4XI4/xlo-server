@@ -88,8 +88,15 @@ class AttemptViewSet(viewsets.ModelViewSet):
                     "question_id": q.id,
                     "description": q.description,
                     "is_multiple_choice": q.is_multiple_choice,
+                    "image": request.build_absolute_uri(q.image.url) if q.image else None,
+                    "audio": request.build_absolute_uri(q.audio.url) if q.audio else None,
                     "choices": [
-                        {"choice_id": c.id, "description": c.description}
+                        {
+                            "choice_id": c.id,
+                            "description": c.description,
+                            "image": request.build_absolute_uri(c.image.url) if c.image else None,
+                            "audio": request.build_absolute_uri(c.audio.url) if c.audio else None,
+                        }
                         for c in random.sample(q.fetched_choices, len(q.fetched_choices))
                     ],
                 }
