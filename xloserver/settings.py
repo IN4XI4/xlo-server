@@ -14,6 +14,10 @@ import json
 import os
 from pathlib import Path
 
+import sentry_sdk
+from sentry_sdk.integrations.celery import CeleryIntegration
+from sentry_sdk.integrations.django import DjangoIntegration
+
 from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -45,6 +49,13 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     USE_X_FORWARDED_HOST = True
     SECURE_SSL_REDIRECT = True
+
+    sentry_sdk.init(
+        dsn=get_secret("SENTRY_DSN"),
+        integrations=[DjangoIntegration(), CeleryIntegration()],
+        send_default_pii=False,
+        traces_sample_rate=0.2,
+    )
 
 ALLOWED_HOSTS = ["api.mixelo.io", "15.237.210.201", "localhost", "127.0.0.1"]
 
