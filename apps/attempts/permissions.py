@@ -12,3 +12,9 @@ class AttemptBasedPermissions(permissions.BasePermission):
             return False
 
         return True
+
+    def has_object_permission(self, request, view, obj):
+        if view.action == "finalize_attempt":
+            return obj.user == request.user
+
+        return True
