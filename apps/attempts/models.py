@@ -1,5 +1,4 @@
 from django.db import models
-from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 
 from apps.assessments.models import Assessment, Question, Choice
@@ -21,6 +20,12 @@ class Attempt(models.Model):
     @property
     def correct_answers_count(self):
         return self.question_attempts.filter(is_correct=True).count()
+
+    @property
+    def duration_seconds(self):
+        if self.end_time and self.start_time:
+            return (self.end_time - self.start_time).total_seconds()
+        return None
 
     def __str__(self):
         return f"Attempt by {self.user.username} on {self.assessment.name} - Score: {self.score}"

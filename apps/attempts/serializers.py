@@ -5,6 +5,7 @@ from apps.attempts.models import Attempt, QuestionAttempt, UserPoints
 
 class AttemptListSerializer(serializers.ModelSerializer):
     assessment_name = serializers.ReadOnlyField(source="assessment.name")
+    duration_seconds = serializers.ReadOnlyField()
 
     class Meta:
         model = Attempt
@@ -18,6 +19,7 @@ class AttemptListSerializer(serializers.ModelSerializer):
             "is_finished",
             "start_time",
             "end_time",
+            "duration_seconds",
             "points_obtained",
             "questions_provided",
         ]
