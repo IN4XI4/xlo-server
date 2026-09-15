@@ -7,6 +7,17 @@ from .models import ActivityPoints, CustomUser, Gender, Experience, ProfileColor
 @admin.register(CustomUser)
 class CustomUserAdmin(admin.ModelAdmin):
     readonly_fields = ("coin_balance", "average_score", "points", "level")
+    list_display = (
+        "username",
+        "email",
+        "first_name",
+        "last_name",
+        "coin_balance",
+        "average_score",
+        "points",
+        "level",
+    )
+    search_fields = ("username", "first_name", "last_name", "email")
 
 
 admin.site.register(Gender)
