@@ -61,6 +61,9 @@ class AttemptViewSet(viewsets.ModelViewSet):
             if not is_space_member:
                 raise ValidationError("You do not have permission to attempt this assessment.")
 
+        if not assessment.user_meets_prerequisite(self.request.user):
+            raise ValidationError("You must first pass the prerequisite assessment.")
+
         previous_attempts_count = Attempt.objects.filter(assessment=assessment, user=self.request.user).count()
         perfect_score_exists = Attempt.objects.filter(assessment=assessment, user=self.request.user, score=100).exists()
         if previous_attempts_count >= assessment.allowed_attempts or perfect_score_exists:

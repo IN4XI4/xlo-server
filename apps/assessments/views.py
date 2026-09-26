@@ -78,7 +78,9 @@ class AssessmentViewSet(viewsets.ModelViewSet):
         user = self.request.user
         presented_param = self.request.query_params.get("presented")
 
-        base_qs = Assessment.objects.select_related("user", "topic", "topic__tag").prefetch_related("spaces")
+        base_qs = Assessment.objects.select_related("user", "topic", "topic__tag", "prerequisite").prefetch_related(
+            "spaces"
+        )
 
         if user.is_authenticated:
             qs = base_qs.filter(Q(is_active=True) | Q(user=user))

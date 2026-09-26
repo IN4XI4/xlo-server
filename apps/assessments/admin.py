@@ -1,4 +1,6 @@
 from django.contrib import admin
+from django.utils.html import format_html
+from django.utils.text import Truncator
 
 from apps.assessments.models import Assessment, Question, Choice, AssessmentDifficultyRating, FollowAssessment
 
@@ -30,11 +32,21 @@ class AssessmentAdmin(admin.ModelAdmin):
         "attempts_count",
         "average_score",
         "created_at",
+        "prerequisite",
     )
     list_filter = ("language", "is_private", "created_at", "topic")
     search_fields = ("name", "user__username", "user__first_name", "user__last_name", "user__email")
-    list_select_related = ("user", "topic")
+    list_select_related = ("user", "topic", "prerequisite")
+    autocomplete_fields = ("prerequisite",)
     list_per_page = 100
+
+    @admin.display(description="Name", ordering="name")
+    def name(self, obj):
+        return format_html(
+            '<span title="{}" style="white-space:nowrap">{}</span>',
+            obj.name,
+            Truncator(obj.name).chars(60),
+        )
 
 
 @admin.register(AssessmentDifficultyRating)
