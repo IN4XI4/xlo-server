@@ -69,6 +69,7 @@ The structure must follow this schema exactly:
   "description": "<one sentence describing what the assessment evaluates>",
   "language": "<language code, default EN>",
   "topic": <topic ID as integer, or null>,
+  "prerequisite": <id of another assessment the user must pass first, or null>,
   "spaces": [],
   "is_private": false,
   "min_score": <integer, typically 60–80>,
@@ -102,6 +103,7 @@ The structure must follow this schema exactly:
 - `difficulty` is a float between **1.0 and 10.0** (e.g., `3.5`, `7.0`).
 - `spaces` is always `[]`.
 - `is_private` is always `false`.
+- `prerequisite`: only set when the user explicitly asks for a prerequisite. Use the **id** of the existing assessment the reader must pass first (not its name). Defaults to `null`.
 - Both the question `description` and each choice `description` accept **Markdown formatting** (bold, italics, code spans, lists, etc.). Use it when it improves clarity — e.g. `` `code` `` for code snippets, **bold** to emphasize a key term.
 
 ---

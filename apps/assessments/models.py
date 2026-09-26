@@ -46,6 +46,9 @@ class Assessment(models.Model):
     topic = models.ForeignKey(Topic, on_delete=models.SET_NULL, null=True, blank=True)
     is_private = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    prerequisite = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="dependents"
+    )
     image = models.ImageField(upload_to=content_file_name, validators=[image_file_size], blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -61,6 +64,22 @@ class Assessment(models.Model):
     user_difficulty_rating = models.FloatField(null=True, blank=True)
     average_score = models.FloatField(null=True, blank=True)
     attempts_count = models.IntegerField(default=0)
+
+    def clean(self):
+        super().clean()
+        if self.prerequisite_id:
+            if self.prerequisite_id == self.pk:
+                raise ValidationError("An assessment cannot be a prerequisite of itself.")
+            node = self.prerequisite
+            while node is not None:
+                if node.pk == self.pk:
+                    raise ValidationError("Prerequisites cannot form a cycle.")
+                node = node.prerequisite
+
+    def user_meets_prerequisite(self, user):
+        if not self.prerequisite_id:
+            return True
+        return self.prerequisite.attempts.filter(user=user, approved=True).exists()
 
     def get_available_attempts(self, user):
         if not user.is_authenticated:

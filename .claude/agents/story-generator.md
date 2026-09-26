@@ -177,7 +177,7 @@ Each block has a `block_class` (integer) and specific fields. **Never include `o
 | 5           | HIGHLIGHT    | `content`                  | Emphasizes a key insight or important takeaway.                                                                        |
 | 6           | QUOTE        | `content`, `quoted_by`     | A meaningful quote. `quoted_by` is the author's name.                                                                 |
 | 7           | FLASHCARD    | `content`, `content_2`     | Two-sided card. `content` is the front (term/question), `content_2` is the back (definition/answer).                 |
-| 8           | FACT         | `content`, `content_class` | Interactive block — the reader guesses if it's a FACT, MYTH, or OPINION. `content_class` must be `FACT`, `MYTH`, or `OPINION`. |
+| 8           | FACT         | `content`, `content_class`, `content_2` | Interactive block — the reader guesses if it's a FACT, MYTH, or OPINION. `content_class` must be `FACT`, `MYTH`, or `OPINION`. `content_2` is the explanation shown after the reader guesses. |
 | 9           | WONDER       | `title`, `content`         | An open-ended reflection prompt, usually one of the last blocks. Invites the reader to think deeper.                  |
 | 10          | QUESTION     | `content`, `options`       | Single-answer question. `options` must contain `correct_answer` (list with one string) and `incorrect_answers` (list with 2–4 strings). |
 | 11          | TESTIMONIAL  | `content`, `block_color`   | A first-person account or testimony from someone who lived the experience. **`block_color` is required** — use a random ID from the palette below unless the user specifies one. |

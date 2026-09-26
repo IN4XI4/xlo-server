@@ -32,6 +32,18 @@ class AssessmentSerializer(serializers.ModelSerializer):
             return Attempt.objects.filter(user=user, assessment=obj, approved=True).exists()
         return False
 
+    def validate_prerequisite(self, value):
+        if value is None:
+            return value
+        if self.instance and value.pk == self.instance.pk:
+            raise serializers.ValidationError("An assessment cannot be a prerequisite of itself.")
+        node = value.prerequisite
+        while node is not None:
+            if self.instance and node.pk == self.instance.pk:
+                raise serializers.ValidationError("Prerequisites cannot form a cycle.")
+            node = node.prerequisite
+        return value
+
 
 class AssessmentDetailSerializer(serializers.ModelSerializer):
     user_username = serializers.ReadOnlyField(source="user.username")
@@ -45,6 +57,8 @@ class AssessmentDetailSerializer(serializers.ModelSerializer):
     is_owner = serializers.SerializerMethodField()
     is_following = serializers.SerializerMethodField()
     language_name = serializers.SerializerMethodField()
+    prerequisite_name = serializers.ReadOnlyField(source="prerequisite.name")
+    prerequisite_met = serializers.SerializerMethodField()
 
     class Meta:
         model = Assessment
@@ -55,6 +69,12 @@ class AssessmentDetailSerializer(serializers.ModelSerializer):
 
     def get_available_attempts(self, obj):
         return obj.get_available_attempts(self.context["request"].user)
+
+    def get_prerequisite_met(self, obj):
+        user = self.context["request"].user
+        if user.is_authenticated:
+            return obj.user_meets_prerequisite(user)
+        return not obj.prerequisite_id
 
     def get_is_owner(self, obj):
         user = self.context["request"].user

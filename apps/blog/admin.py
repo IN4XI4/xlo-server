@@ -21,6 +21,7 @@ class StoryAdmin(admin.ModelAdmin):
     search_fields = ("title",)
     list_filter = ("user__username", "topic")
     list_per_page = 100
+    ordering = ("-created_time",)
 
 
 @admin.register(Card)
