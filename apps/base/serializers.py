@@ -3,7 +3,6 @@ from rest_framework import serializers
 
 from .models import TopicTag, Topic, SoftSkill, Mentor
 from apps.blog.models import Like, Card, UserCardView
-from apps.spaces.models import Space
 from apps.users.utils import get_user_level
 from xloserver.constants import get_level
 
@@ -14,25 +13,16 @@ class TopicReadOnlySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Topic
-        fields = ["id", "title", "image", "user_has_liked", "slug", "story_count"]
+        fields = ["id", "title", "description", "image", "user_has_liked", "slug", "story_count"]
 
     def get_user_has_liked(self, obj):
-        user = self.context["request"].user
-        if user.is_anonymous:
-            return False
-        content_type = ContentType.objects.get_for_model(obj)
-        like = Like.objects.filter(user=user, content_type=content_type.id, object_id=obj.id, is_active=True).first()
-        return like.id if like else False
+        return self.context.get("liked_topic_ids", {}).get(obj.id, False)
 
     def get_story_count(self, obj):
-        space_id = self.context.get("space_id")
-        user = self.context["request"].user
-
-        if space_id:
-            if Space.user_is_member(user, space_id):
-                return obj.stories.filter(spaces__id=space_id).distinct().count()
-
-        return obj.stories.filter(is_private=False).count()
+        # Annotated by TopicTagsViewSet; fall back to a query when serialized elsewhere.
+        if hasattr(obj, "story_count"):
+            return obj.story_count
+        return obj.stories.filter(is_private=False, is_active=True).count()
 
 
 class TopicTagSerializer(serializers.ModelSerializer):
@@ -49,6 +39,8 @@ class TopicTagSerializer(serializers.ModelSerializer):
         return content_type.id
 
     def get_topic_count(self, obj):
+        if hasattr(obj, "topic_count"):
+            return obj.topic_count
         return obj.topic_set.count()
 
 
