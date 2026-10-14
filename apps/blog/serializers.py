@@ -54,6 +54,7 @@ class StoryDetailSerializer(serializers.ModelSerializer):
     topic_title = serializers.ReadOnlyField(source="topic.title")
     topic_slug = serializers.ReadOnlyField(source="topic.slug")
     tag_name = serializers.ReadOnlyField(source="topic.tag.name")
+    tag_color = serializers.ReadOnlyField(source="topic.tag.color")
     user_color = serializers.ReadOnlyField(source="user.profile_color.color")
     user_picture = serializers.ImageField(source="user.profile_picture", required=False, allow_null=True, use_url=True)
     is_owner = serializers.SerializerMethodField()

@@ -98,6 +98,9 @@ class StoriesViewSet(viewsets.ModelViewSet):
     filterset_fields = {
         "title": ("icontains",),
         "topic": ("exact", "in"),
+        "topic__tag": ("exact", "in"),
+        "language": ("exact", "in"),
+        "difficulty_level": ("exact", "in", "gte", "lte"),
         "created_time": ("gte", "lte"),
         "updated_time": ("gte", "lte"),
         "user": ("exact",),

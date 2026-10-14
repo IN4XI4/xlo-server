@@ -1,3 +1,4 @@
+from django.db.models import Count, Prefetch, Q
 from django.shortcuts import get_object_or_404
 from django.contrib.contenttypes.models import ContentType
 from rest_framework import viewsets, generics, permissions
@@ -17,6 +18,8 @@ from .serializers import (
     ContentTypeSerializer,
 )
 from .permissions import MentorPermissions
+from apps.blog.models import Like
+from apps.spaces.models import Space
 from apps.users.utils import get_user_level
 from xloserver.constants import get_level
 
@@ -39,15 +42,36 @@ class TopicTagsViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         space_id = self.request.query_params.get("space_id")
+        topics = Topic.objects.annotate(
+            story_count=Count("stories", filter=self.story_count_filter(space_id))
+        ).order_by("id")
+        queryset = TopicTag.objects.all()
         if space_id:
-            return TopicTag.objects.filter(spaces__id=space_id).distinct().order_by("id")
-        return TopicTag.objects.all().order_by("id")
+            queryset = queryset.filter(spaces__id=space_id)
+        return (
+            queryset.annotate(topic_count=Count("topic"))
+            .prefetch_related(Prefetch("topic_set", queryset=topics))
+            .order_by("id")
+        )
+
+    def story_count_filter(self, space_id):
+        """
+        Approximate story count per topic: the space's active stories for its members,
+        otherwise the public active stories.
+        """
+        if space_id and Space.user_is_member(self.request.user, space_id):
+            return Q(stories__spaces__id=space_id, stories__is_active=True)
+        return Q(stories__is_private=False, stories__is_active=True)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        space_id = self.request.query_params.get("space_id")
-        if space_id:
-            context["space_id"] = space_id
+        user = self.request.user
+        if user.is_authenticated:
+            context["liked_topic_ids"] = dict(
+                Like.objects.filter(
+                    user=user, content_type=ContentType.objects.get_for_model(Topic), is_active=True
+                ).values_list("object_id", "id")
+            )
         return context
 
 
