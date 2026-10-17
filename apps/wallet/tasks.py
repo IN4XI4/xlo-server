@@ -2,7 +2,7 @@ from celery import shared_task
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 
-FROM_EMAIL = "Mixelo Notifications <contact@mixelo.io>"
+FROM_EMAIL = "Mixelo Notifications <noreply@mixelo.io>"
 
 
 @shared_task
