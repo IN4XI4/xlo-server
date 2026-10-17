@@ -5,7 +5,7 @@ from django.contrib.contenttypes.models import ContentType
 
 from .models import RecallCard
 
-FROM_EMAIL_TEXT = "Mixelo Notifications <contact@mixelo.io>"
+FROM_EMAIL_TEXT = "Mixelo Notifications <noreply@mixelo.io>"
 
 
 @shared_task
