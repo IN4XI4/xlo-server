@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.attempts.models import Attempt, QuestionAttempt, UserPoints
+from apps.users.utils import mask_identifier
 
 
 class AttemptListSerializer(serializers.ModelSerializer):
@@ -23,7 +24,16 @@ class AttemptListSerializer(serializers.ModelSerializer):
             "points_obtained",
             "questions_provided",
         ]
-        read_only_fields = ("user", "score", "approved", "start_time", "end_time")
+        read_only_fields = (
+            "user",
+            "score",
+            "approved",
+            "start_time",
+            "end_time",
+            "is_finished",
+            "points_obtained",
+            "questions_provided",
+        )
 
 
 class AttemptDetailSerializer(serializers.ModelSerializer):
@@ -34,7 +44,7 @@ class AttemptDetailSerializer(serializers.ModelSerializer):
     assessment_image = serializers.ImageField(source="assessment.image", read_only=True, use_url=True)
     assessment_author_first_name = serializers.ReadOnlyField(source="assessment.user.first_name")
     assessment_author_last_name = serializers.ReadOnlyField(source="assessment.user.last_name")
-    assessment_author_username = serializers.ReadOnlyField(source="assessment.user.username")
+    assessment_author_username = serializers.SerializerMethodField()
     assessment_difficulty = serializers.ReadOnlyField(source="assessment.difficulty")
     assessment_community_difficulty = serializers.ReadOnlyField(source="assessment.user_difficulty_rating")
     available_attempts = serializers.SerializerMethodField()
@@ -43,7 +53,19 @@ class AttemptDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Attempt
         fields = "__all__"
-        read_only_fields = ("user", "score", "approved", "start_time", "end_time")
+        read_only_fields = (
+            "user",
+            "score",
+            "approved",
+            "start_time",
+            "end_time",
+            "is_finished",
+            "points_obtained",
+            "questions_provided",
+        )
+
+    def get_assessment_author_username(self, obj):
+        return mask_identifier(obj.assessment.user.username)
 
     def get_available_attempts(self, obj):
         return obj.assessment.get_available_attempts(self.context["request"].user)

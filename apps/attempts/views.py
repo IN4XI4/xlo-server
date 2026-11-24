@@ -156,7 +156,11 @@ class AttemptViewSet(viewsets.ModelViewSet):
         )
 
 
-class QuestionAttemptViewSet(viewsets.ModelViewSet):
+class QuestionAttemptViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Question attempts are created only by finalize_attempt, never directly.
+    """
+
     permission_classes = [AttemptBasedPermissions]
     queryset = QuestionAttempt.objects.all()
     serializer_class = QuestionAttemptSerializer
@@ -171,16 +175,6 @@ class QuestionAttemptViewSet(viewsets.ModelViewSet):
         if self.request.user.is_authenticated:
             return QuestionAttempt.objects.filter(attempt__assessment__user=self.request.user)
         return QuestionAttempt.objects.none()
-
-    def perform_create(self, serializer):
-        question = Question.objects.get(pk=self.request.data["question"])
-
-        # Checking if answer is correct:
-        correct_choices_ids = set(question.choices.filter(correct_answer=True).values_list("id", flat=True))
-        selected_choices_ids = set([int(choice_id) for choice_id in self.request.data["selected_choices"]])
-
-        is_correct = correct_choices_ids == selected_choices_ids
-        serializer.save(is_correct=is_correct)
 
 
 class GlobalStatsAPIView(APIView):

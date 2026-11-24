@@ -9,6 +9,7 @@ from apps.avatar.models import (
     UserUnlockedColor,
     UserUnlockedEyesColor,
     UserUnlockedSkinColor,
+    UnlockedItemType,
 )
 from apps.avatar.items.item_colors import COLORS
 
@@ -105,6 +106,44 @@ class AvatarSerializer(serializers.ModelSerializer):
 
 
 class AvatarUpdateSerializer(serializers.ModelSerializer):
+    ITEM_SLOTS = {
+        "hair_item": UnlockedItemType.HAIR,
+        "face_item": UnlockedItemType.FACE,
+        "shirt_item": UnlockedItemType.SHIRT,
+        "pants_item": UnlockedItemType.PANTS,
+        "shoes_item": UnlockedItemType.SHOES,
+        "accessory_item": UnlockedItemType.ACCESSORY,
+        "ki_item": UnlockedItemType.KI,
+    }
+    COLOR_SLOTS = {
+        "hair_color": UserUnlockedColor,
+        "shirt_color": UserUnlockedColor,
+        "pants_color": UserUnlockedColor,
+        "shoes_color": UserUnlockedColor,
+        "accessory_color": UserUnlockedColor,
+        "ki_color": UserUnlockedColor,
+        "eyes_color": UserUnlockedEyesColor,
+        "skin_color": UserUnlockedSkinColor,
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only items and colors unlocked by the avatar's owner can be equipped.
+        owner = self.instance.user if self.instance else self.context["request"].user
+        items = UserUnlockedItem.objects.filter(user=owner).select_related("catalog_item")
+        for field_name in self.ITEM_SLOTS:
+            self.fields[field_name].queryset = items
+        for field_name, model in self.COLOR_SLOTS.items():
+            self.fields[field_name].queryset = model.objects.filter(user=owner)
+
+    def validate(self, attrs):
+        # Each item must go in its own slot (a shirt can't be used as hair).
+        for field_name, item_type in self.ITEM_SLOTS.items():
+            item = attrs.get(field_name)
+            if item and item.catalog_item.item_type != item_type:
+                raise serializers.ValidationError({field_name: f"This item is not of type {item_type}."})
+        return attrs
+
     class Meta:
         model = Avatar
         fields = [

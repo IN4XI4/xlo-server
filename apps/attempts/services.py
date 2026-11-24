@@ -21,7 +21,7 @@ def update_user_average_score(user, user_points=None):
     from apps.attempts.models import Attempt
 
     user.average_score = Attempt.objects.filter(user=user).aggregate(avg_score=Avg("score"))["avg_score"] or 0
-    user.save()
+    user.save(update_fields=["average_score"])
     if user_points:
         category_attempts = Attempt.objects.filter(user=user, assessment__topic=user_points.category)
         user_points.average_score = category_attempts.aggregate(Avg("score"))["score__avg"] or 0
@@ -36,6 +36,7 @@ def process_finalization(attempt, answers):
     """
     from apps.assessments.models import Question
     from apps.attempts.models import Attempt, QuestionAttempt, UserPoints
+    from apps.users.utils import grant_points
 
     with transaction.atomic():
         attempt = Attempt.objects.select_for_update().get(pk=attempt.pk)
@@ -43,23 +44,40 @@ def process_finalization(attempt, answers):
         if attempt.is_finished:
             return attempt
 
-        question_attempts_to_create = []
+        # Only questions of this attempt's assessment are accepted, each one once.
+        questions = {
+            question.id: question
+            for question in Question.objects.filter(assessment=attempt.assessment).prefetch_related("choices")
+        }
+
+        number_of_questions = attempt.assessment.number_of_questions
+        answered_question_ids = set()
+        question_attempts = []  # (QuestionAttempt, selected choice ids)
         for answer in answers:
-            question_id = answer.get("question_id")
-            selected_choices = set(answer.get("choices", []))
+            # Never count more answers than questions served in an attempt.
+            if len(question_attempts) >= number_of_questions:
+                break
             try:
-                question = Question.objects.get(pk=question_id)
-            except Question.DoesNotExist:
+                question_id = int(answer.get("question_id"))
+            except (TypeError, ValueError):
                 continue
-            correct_choices_ids = set(question.choices.filter(correct_answer=True).values_list("id", flat=True))
+            question = questions.get(question_id)
+            if question is None or question_id in answered_question_ids:
+                continue
+            answered_question_ids.add(question_id)
+
+            # Keep only choices that belong to this question.
+            valid_choice_ids = {choice.id for choice in question.choices.all()}
+            selected_choices = set(answer.get("choices", [])) & valid_choice_ids
+            correct_choices_ids = {choice.id for choice in question.choices.all() if choice.correct_answer}
             is_correct = correct_choices_ids == selected_choices
-            question_attempts_to_create.append(
-                QuestionAttempt(attempt=attempt, question_id=question_id, is_correct=is_correct)
+            question_attempts.append(
+                (QuestionAttempt(attempt=attempt, question=question, is_correct=is_correct), selected_choices)
             )
 
-        QuestionAttempt.objects.bulk_create(question_attempts_to_create)
-        for qa, answer in zip(question_attempts_to_create, answers):
-            qa.selected_choices.set(answer.get("choices", []))
+        QuestionAttempt.objects.bulk_create([question_attempt for question_attempt, _ in question_attempts])
+        for question_attempt, selected_choices in question_attempts:
+            question_attempt.selected_choices.set(selected_choices)
 
         total_questions = attempt.assessment.number_of_questions
         correct_answers_count = attempt.question_attempts.filter(is_correct=True).count()
@@ -83,11 +101,9 @@ def process_finalization(attempt, answers):
             )
 
         if attempt.points_obtained > 0:
-            attempt.user.points += attempt.points_obtained
+            grant_points(attempt.user_id, "complete_assessment", attempt.points_obtained)
             if user_points:
                 user_points.total_points += attempt.points_obtained
-            attempt.user.save()
-            if user_points:
                 user_points.save()
 
         attempt.is_finished = True

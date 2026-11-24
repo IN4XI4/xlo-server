@@ -7,10 +7,15 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.serializers import ValidationError
 
 from .models import Space, MembershipRequest
-from .permissions import SpacePermissions, MembershipRequestPermissions, MembershipInvitationPermissions
+from .permissions import (
+    SpacePermissions,
+    MembershipRequestPermissions,
+    IsSpaceOwner,
+    IsSpaceOwnerOrAdmin,
+    IsSpaceMemberIfPrivate,
+)
 from .serializers import (
     SpaceSerializer,
     SpaceActiveSerializer,
@@ -24,8 +29,9 @@ from .tasks import send_space_invitation_email
 from apps.base.models import TopicTag
 from apps.users.models import CustomUser
 from apps.base.serializers import TopicTagSerializer
-from apps.users.serializers import UserDetailSerializer
+from apps.users.serializers import UserDetailSerializer, MaskedEmailUserDetailSerializer
 
+MAX_INVITATION_EMAILS = 20
 
 class SpacesPagination(PageNumberPagination):
     page_size = 15
@@ -124,12 +130,15 @@ class SpaceViewSet(viewsets.ModelViewSet):
         serializer = SpaceDetailSerializer(spaces, many=True, context={"request": request})
         return Response(serializer.data)
 
-    @action(detail=False, methods=["get"], url_path="(?P<slug>[^/.]+)/members", permission_classes=[IsAuthenticated])
+    @action(
+        detail=False, methods=["get"], url_path="(?P<slug>[^/.]+)/members", permission_classes=[IsSpaceMemberIfPrivate]
+    )
     def members(self, request, slug=None):
         try:
             space = Space.objects.get(slug=slug)
         except Space.DoesNotExist:
             return Response({"detail": "Space not found."}, status=404)
+        self.check_object_permissions(request, space)
         queryset = space.members.all()
 
         search_term = request.query_params.get("search")
@@ -148,12 +157,15 @@ class SpaceViewSet(viewsets.ModelViewSet):
         serializer = UserDetailSerializer(queryset, many=True, context={"request": request})
         return Response(serializer.data)
 
-    @action(detail=False, methods=["get"], url_path="(?P<slug>[^/.]+)/admins", permission_classes=[IsAuthenticated])
+    @action(
+        detail=False, methods=["get"], url_path="(?P<slug>[^/.]+)/admins", permission_classes=[IsSpaceMemberIfPrivate]
+    )
     def admins(self, request, slug=None):
         try:
             space = Space.objects.get(slug=slug)
         except Space.DoesNotExist:
             return Response({"detail": "Space not found."}, status=404)
+        self.check_object_permissions(request, space)
         queryset = space.admins.all()
 
         search_term = request.query_params.get("search")
@@ -176,13 +188,14 @@ class SpaceViewSet(viewsets.ModelViewSet):
         detail=False,
         methods=["get"],
         url_path="(?P<slug>[^/.]+)/pending_requests",
-        permission_classes=[IsAuthenticated],
+        permission_classes=[IsSpaceOwnerOrAdmin],
     )
     def pending_requests(self, request, slug=None):
         try:
             space = Space.objects.get(slug=slug)
         except Space.DoesNotExist:
             return Response({"detail": "Space not found."}, status=404)
+        self.check_object_permissions(request, space)
         search_term = request.query_params.get("search", "").strip()
         pending_requests = MembershipRequest.objects.filter(
             space=space, request_type="request", status="pending"
@@ -201,13 +214,13 @@ class SpaceViewSet(viewsets.ModelViewSet):
         serializer_context = self.get_serializer_context()
         serializer_context["request_map"] = request_map
         if page is not None:
-            serializer = UserDetailSerializer(page, many=True, context=serializer_context)
+            serializer = MaskedEmailUserDetailSerializer(page, many=True, context=serializer_context)
             return self.get_paginated_response(serializer.data)
 
-        serializer = UserDetailSerializer(users, many=True, context=serializer_context)
+        serializer = MaskedEmailUserDetailSerializer(users, many=True, context=serializer_context)
         return Response(serializer.data)
 
-    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated], url_path="make-admin")
+    @action(detail=True, methods=["post"], permission_classes=[IsSpaceOwner], url_path="make-admin")
     def make_admin(self, request, pk=None):
         space = self.get_object()
         user_id = request.data.get("user_id")
@@ -220,7 +233,7 @@ class SpaceViewSet(viewsets.ModelViewSet):
 
         return Response({"detail": f"User {user_id} promoted to admin."}, status=200)
 
-    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated], url_path="make-member")
+    @action(detail=True, methods=["post"], permission_classes=[IsSpaceOwner], url_path="make-member")
     def make_member(self, request, pk=None):
         space = self.get_object()
         user_id = request.data.get("user_id")
@@ -279,7 +292,7 @@ class SpaceViewSet(viewsets.ModelViewSet):
 
         return Response({"detail": "You do not have permission to remove this user."}, status=403)
 
-    @action(detail=True, methods=["get"], url_path="users-to-invite", permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=["get"], url_path="users-to-invite", permission_classes=[IsSpaceOwnerOrAdmin])
     def users_to_invite(self, request, pk=None):
         space = self.get_object()
 
@@ -295,35 +308,45 @@ class SpaceViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(Q(first_name__icontains=search) | Q(last_name__icontains=search))
 
         page = self.paginate_queryset(queryset)
-        serializer = UserDetailSerializer(page, many=True, context={"request": request})
+        serializer = MaskedEmailUserDetailSerializer(page, many=True, context={"request": request})
         return self.get_paginated_response(serializer.data)
 
     @action(detail=True, methods=["post"], url_path="invite-multiple")
     def invite_multiple(self, request, pk=None):
         space = self.get_object()
         user_ids = request.data.get("user_ids", [])
+        if not isinstance(user_ids, list) or not all(isinstance(uid, int) for uid in user_ids):
+            return Response({"detail": "user_ids must be a list of IDs."}, status=status.HTTP_400_BAD_REQUEST)
 
-        for uid in user_ids:
-            if space.members.filter(id=uid).exists():
-                continue
-            if space.admins.filter(id=uid).exists():
-                continue
-
-            if MembershipRequest.objects.filter(
-                space=space, user_id=uid, request_type="invite", status="pending"
-            ).exists():
-                continue
-            MembershipRequest.objects.create(space=space, user_id=uid, request_type="invite", status="pending")
+        # Only existing users that are not the owner, an admin, a member or already invited.
+        already_invited = MembershipRequest.objects.filter(
+            space=space, request_type="invite", status="pending"
+        ).values("user_id")
+        invitees = (
+            CustomUser.objects.filter(id__in=user_ids)
+            .exclude(id=space.owner_id)
+            .exclude(admin_spaces=space)
+            .exclude(member_spaces=space)
+            .exclude(id__in=already_invited)
+        )
+        MembershipRequest.objects.bulk_create(
+            [MembershipRequest(space=space, user=user, request_type="invite", status="pending") for user in invitees]
+        )
 
         return Response({"detail": "Invitations sent successfully."}, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=["post"], url_path="invite-emails", permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=["post"], url_path="invite-emails", permission_classes=[IsSpaceOwnerOrAdmin])
     def invite_emails(self, request, pk=None):
         space = self.get_object()
         emails = request.data.get("emails", [])
 
         if not isinstance(emails, list) or not emails:
             return Response({"detail": "emails must be a non-empty list."}, status=status.HTTP_400_BAD_REQUEST)
+        if len(emails) > MAX_INVITATION_EMAILS:
+            return Response(
+                {"detail": f"You can invite up to {MAX_INVITATION_EMAILS} emails at a time."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Validar correos
         email_regex = re.compile(r"[^@]+@[^@]+\.[^@]+")
@@ -365,24 +388,26 @@ class MembershipRequestViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user, status="pending", request_type="request")
 
-    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated], url_path="accept")
+    @action(detail=True, methods=["post"], permission_classes=[IsSpaceOwnerOrAdmin], url_path="accept")
     def accept_request(self, request, pk=None):
         try:
             user_request = MembershipRequest.objects.get(pk=pk, request_type="request", status="pending")
         except MembershipRequest.DoesNotExist:
             return Response({"detail": "Request not found or already processed."}, status=status.HTTP_404_NOT_FOUND)
+        self.check_object_permissions(request, user_request.space)
         user_request.status = "approved"
         user_request.save()
         user_request.space.members.add(user_request.user)
 
         return Response({"detail": "request accepted successfully."}, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated], url_path="reject")
+    @action(detail=True, methods=["post"], permission_classes=[IsSpaceOwnerOrAdmin], url_path="reject")
     def reject_request(self, request, pk=None):
         try:
             user_request = MembershipRequest.objects.get(pk=pk, request_type="request", status="pending")
         except MembershipRequest.DoesNotExist:
             return Response({"detail": "Request not found or already processed."}, status=status.HTTP_404_NOT_FOUND)
+        self.check_object_permissions(request, user_request.space)
 
         user_request.status = "rejected"
         user_request.save()
@@ -390,40 +415,12 @@ class MembershipRequestViewSet(viewsets.ModelViewSet):
         return Response({"detail": "Request rejected successfully."}, status=status.HTTP_200_OK)
 
 
-class MembershipInvitationViewSet(viewsets.ModelViewSet):
-    permission_classes = [MembershipInvitationPermissions]
-    serializer_class = MembershipRequestSerializer
-    filterset_fields = {
-        "space": ("exact",),
-        "user": ("exact",),
-        "status": ("exact", "in"),
-        "created_time": ("gte", "lte"),
-    }
+class MembershipInvitationViewSet(viewsets.GenericViewSet):
+    """
+    Invitee-side actions only. Invitations are created through SpaceViewSet.invite_multiple.
+    """
 
-    def get_queryset(self):
-        user = self.request.user
-        return (
-            MembershipRequest.objects.filter(request_type="invite")
-            .filter(Q(user=user) | Q(space__admins__in=[user]) | Q(space__owner=user))
-            .distinct()
-        )
-
-    def get_serializer_class(self):
-        if self.action in ["update", "partial_update"]:
-            return MembershipRequestUpdateSerializer
-        return super().get_serializer_class()
-
-    def perform_create(self, serializer):
-        space_id = self.request.data.get("space")
-        space = Space.objects.get(id=space_id)
-
-        if space.owner == self.request.user or space.admins.filter(id=self.request.user.id).exists():
-            invitee_id = self.request.data.get("user")
-            if invitee_id == self.request.user.id:
-                raise ValidationError("You can't invite yourself")
-            serializer.save()
-        else:
-            raise ValidationError("You don't have the permissions to invite someone to this space.")
+    permission_classes = [IsAuthenticated]
 
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated], url_path="my-invitations")
     def my_invitations(self, request):

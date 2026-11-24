@@ -50,4 +50,20 @@ ACTIVITY_POINT_ACTIONS = {
     "view_story": {"points": 5, "description": "View a story"},
     "comment_story": {"points": 25, "description": "Comment on a story"},
     "create_story": {"points": 90, "description": "Create a story"},
+    "complete_assessment": {"points": None, "description": "Complete an assessment"},
+    "daily_login": {"points": 1, "description": "Daily login"},
 }
+
+# Activity heatmap: minimum points earned in a day for levels 1 to 4 (0 points = level 0).
+ACTIVITY_LEVEL_MIN_POINTS = [1, 11, 31, 61]
+
+# Activity heatmap length: 26 weeks.
+ACTIVITY_HEATMAP_DAYS = 182
+
+# Stories read per category: the bars' full value is the first step strictly above the
+# most read category (doubling after the last step).
+CATEGORY_SCALE_STEPS = [10, 25, 50, 100, 200, 500, 1000]
+
+# Category (TopicTag) list shared by every profile; invalidated on TopicTag save/delete.
+TOPIC_TAGS_CACHE_KEY = "base:topic_tags"
+TOPIC_TAGS_CACHE_TIMEOUT = 60 * 60 * 24

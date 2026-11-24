@@ -107,6 +107,7 @@ class MentorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Mentor
         fields = "__all__"
+        read_only_fields = ["user", "created_by"]
 
     def get_name(self, obj):
         if obj.user:
