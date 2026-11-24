@@ -2,10 +2,11 @@ from rest_framework import serializers
 
 from apps.assessments.models import Assessment, Question, Choice, AssessmentDifficultyRating, FollowAssessment
 from apps.attempts.models import Attempt
+from apps.users.utils import mask_identifier
 
 
 class AssessmentSerializer(serializers.ModelSerializer):
-    user_username = serializers.ReadOnlyField(source="user.username")
+    user_username = serializers.SerializerMethodField()
     user_first_name = serializers.ReadOnlyField(source="user.first_name")
     user_last_name = serializers.ReadOnlyField(source="user.last_name")
     topic_name = serializers.ReadOnlyField(source="topic.title")
@@ -25,6 +26,9 @@ class AssessmentSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
+
+    def get_user_username(self, obj):
+        return mask_identifier(obj.user.username)
 
     def get_is_approved(self, obj):
         user = self.context["request"].user
@@ -46,7 +50,7 @@ class AssessmentSerializer(serializers.ModelSerializer):
 
 
 class AssessmentDetailSerializer(serializers.ModelSerializer):
-    user_username = serializers.ReadOnlyField(source="user.username")
+    user_username = serializers.SerializerMethodField()
     user_first_name = serializers.ReadOnlyField(source="user.first_name")
     user_last_name = serializers.ReadOnlyField(source="user.last_name")
     user_avatar = serializers.ImageField(source="user.profile_picture", required=False, allow_null=True, use_url=True)
@@ -63,6 +67,9 @@ class AssessmentDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Assessment
         fields = "__all__"
+
+    def get_user_username(self, obj):
+        return mask_identifier(obj.user.username)
 
     def get_followers_count(self, obj):
         return FollowAssessment.objects.filter(assessment=obj, follower__is_active=True).count()

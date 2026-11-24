@@ -176,6 +176,12 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 5,
+    # Per user (or per IP when anonymous), for views with ScopedRateThrottle.
+    "DEFAULT_THROTTLE_RATES": {
+        "profile_stats": "30/min",
+        "profile_activity": "30/min",
+        "profile_categories": "30/min",
+    },
 }
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/

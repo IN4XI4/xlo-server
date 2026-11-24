@@ -23,6 +23,9 @@ class Like(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["user", "content_type", "object_id"], name="unique_like"),
         ]
+        indexes = [
+            models.Index(fields=["content_type", "object_id"], name="blog_like_content_idx"),
+        ]
 
     def __str__(self):
         return str(self.object_id)

@@ -1,13 +1,15 @@
 from django.contrib.auth import get_user_model
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
 from django_countries.serializer_fields import CountryField
 from django.utils.timezone import now
 from rest_framework import serializers
 
 from apps.blog.models import Like, Story, Comment, UserStoryView
+from apps.spaces.models import Space
 from apps.users.models import ProfileColor, Experience, Gender, UserBadge, BadgeLevels, Follow
-from apps.users.utils import get_user_level
-from xloserver.constants import get_level
+from apps.users.utils import get_user_level, mask_identifier
+from xloserver.constants import get_level, USER_LEVELS
 
 
 class ProfileColorSerializer(serializers.ModelSerializer):
@@ -131,6 +133,25 @@ class CompleteUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = get_user_model()
         exclude = ["password"]
+        read_only_fields = [
+            "email",
+            "username",
+            "is_superuser",
+            "is_staff",
+            "is_active",
+            "groups",
+            "user_permissions",
+            "coin_balance",
+            "coin_last_updated_at",
+            "points",
+            "level",
+            "average_score",
+            "active_days",
+            "date_joined",
+            "last_login",
+            "reset_code",
+            "google_id",
+        ]
 
     def get_user_level_display(self, obj):
         numeric_level, level_name = get_user_level(obj)
@@ -148,7 +169,6 @@ class ReadOnlyUserSerializer(serializers.ModelSerializer):
         model = get_user_model()
         fields = [
             "id",
-            "username",
             "first_name",
             "last_name",
             "country",
@@ -324,6 +344,125 @@ class UserDetailSerializer(serializers.ModelSerializer):
         return request_map.get(obj.id)
 
 
+class MaskedEmailUserDetailSerializer(UserDetailSerializer):
+    """
+    Same as UserDetailSerializer but the email is masked: juankrios15@gmail.com -> ju***@gmail.com
+    """
+
+    email = serializers.SerializerMethodField()
+
+    def get_email(self, obj):
+        return mask_identifier(obj.email)
+
+
+class ProfileCountsMixin(serializers.Serializer):
+    """
+    Public counters shown on a user's profile page.
+    """
+
+    followers_count = serializers.SerializerMethodField()
+    following_count = serializers.SerializerMethodField()
+    stories_count = serializers.SerializerMethodField()
+
+    def get_followers_count(self, obj):
+        return obj.followers.filter(follower__is_active=True).count()
+
+    def get_following_count(self, obj):
+        return obj.following.filter(followed__is_active=True).count()
+
+    def get_stories_count(self, obj):
+        return obj.stories.filter(is_active=True, is_private=False).count()
+
+
+class UserProfileDetailSerializer(ProfileCountsMixin, UserDetailSerializer):
+    """
+    Profile page of any user, seen by an authenticated user. Hides the email.
+    """
+
+    level_progress = serializers.SerializerMethodField()
+
+    class Meta(UserDetailSerializer.Meta):
+        fields = [field for field in UserDetailSerializer.Meta.fields if field != "email"] + [
+            "date_joined",
+            "followers_count",
+            "following_count",
+            "stories_count",
+            "level_progress",
+        ]
+
+    def get_level_progress(self, obj):
+        level_index = min(obj.level, len(USER_LEVELS) - 1)
+        current_level = USER_LEVELS[level_index]
+        next_level = USER_LEVELS[level_index + 1] if level_index + 1 < len(USER_LEVELS) else None
+        return {
+            "level_value": current_level["level"],
+            "level_name": current_level["name"],
+            "points": obj.points,
+            "next_level_name": next_level["name"] if next_level else None,
+            "next_level_points": next_level["min_points"] if next_level else None,
+        }
+
+
+class OwnerUserProfileSerializer(UserProfileDetailSerializer):
+    """
+    Profile page of the authenticated user, seen by themselves.
+    """
+
+    attempts_count = serializers.SerializerMethodField()
+    spaces_count = serializers.SerializerMethodField()
+
+    class Meta(UserProfileDetailSerializer.Meta):
+        fields = UserProfileDetailSerializer.Meta.fields + [
+            "coin_balance",
+            "attempts_count",
+            "spaces_count",
+        ]
+
+    def get_attempts_count(self, obj):
+        return obj.attempts.filter(is_finished=True).count()
+
+    def get_spaces_count(self, obj):
+        return Space.objects.filter(Q(owner=obj) | Q(admins=obj) | Q(members=obj)).distinct().count()
+
+
+class PublicUserSerializer(ProfileCountsMixin, serializers.ModelSerializer):
+    """
+    Limited profile page of any user, seen by anonymous visitors.
+    """
+
+    country = CountryField(name_only=True)
+    country_flag = serializers.SerializerMethodField()
+    profile_picture = serializers.SerializerMethodField()
+
+    class Meta:
+        model = get_user_model()
+        fields = [
+            "id",
+            "first_name",
+            "last_name",
+            "profile_picture",
+            "country",
+            "country_flag",
+            "profession",
+            "date_joined",
+            "followers_count",
+            "following_count",
+            "stories_count",
+        ]
+
+    def get_country_flag(self, obj):
+        request = self.context.get("request")
+        if obj.country and request:
+            return request.build_absolute_uri(obj.country.flag)
+        return None
+
+    def get_profile_picture(self, obj):
+        if obj.profile_picture:
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.profile_picture.url)
+        return None
+
+
 class PasswordResetSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         fields = ("password", "password2", "reset_code")
@@ -341,8 +480,8 @@ class UserBadgeSerializer(serializers.ModelSerializer):
 
 
 class FollowSerializer(serializers.ModelSerializer):
-    follower_username = serializers.ReadOnlyField(source="follower.username")
-    followed_username = serializers.ReadOnlyField(source="followed.username")
+    follower_username = serializers.SerializerMethodField()
+    followed_username = serializers.SerializerMethodField()
     follower_first_name = serializers.ReadOnlyField(source="follower.first_name")
     followed_first_name = serializers.ReadOnlyField(source="followed.first_name")
     follower_last_name = serializers.ReadOnlyField(source="follower.last_name")
@@ -363,6 +502,12 @@ class FollowSerializer(serializers.ModelSerializer):
         else:
             raise serializers.ValidationError("'followed' field is required.")
         return data
+
+    def get_follower_username(self, obj):
+        return mask_identifier(obj.follower.username)
+
+    def get_followed_username(self, obj):
+        return mask_identifier(obj.followed.username)
 
     def get_follower_profile_picture(self, obj):
         if obj.follower.profile_picture:

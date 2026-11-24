@@ -1,5 +1,6 @@
 from rest_framework import permissions
 
+from apps.spaces.models import Space
 from apps.users.utils import get_user_level
 from xloserver.constants import get_level
 
@@ -30,6 +31,42 @@ class SpacePermissions(permissions.BasePermission):
         return obj.owner == request.user
 
 
+class IsSpaceOwner(permissions.BasePermission):
+    """
+    Only the owner of the space can perform the action.
+    """
+
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
+        return obj.owner == request.user
+
+
+class IsSpaceOwnerOrAdmin(permissions.BasePermission):
+    """
+    Only the owner or an admin of the space can perform the action.
+    """
+
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
+        return obj.owner == request.user or obj.admins.filter(id=request.user.id).exists()
+
+
+class IsSpaceMemberIfPrivate(permissions.BasePermission):
+    """
+    Anyone authenticated for free spaces; only owner, admins and members for private spaces.
+    """
+
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
+        return obj.access_type != "private" or Space.user_is_member(request.user, obj.id)
+
+
 class MembershipRequestPermissions(permissions.BasePermission):
 
     def has_permission(self, request, view):
@@ -48,26 +85,4 @@ class MembershipRequestPermissions(permissions.BasePermission):
 
         if view.action in ["update", "partial_update"]:
             return obj.space.owner == user or obj.space.admins.filter(id=user.id).exists()
-        return False
-
-
-class MembershipInvitationPermissions(permissions.BasePermission):
-
-    def has_permission(self, request, view):
-        if view.action in ["list", "retrieve", "create"]:
-            return request.user.is_authenticated
-        return True
-
-    def has_object_permission(self, request, view, obj):
-        user = request.user
-
-        if view.action in ["update", "partial_update"]:
-            return obj.user == user
-
-        if view.action == "destroy":
-            return obj.space.owner == user or obj.space.admins.filter(id=user.id).exists()
-
-        if request.method in permissions.SAFE_METHODS:
-            return request.user.is_authenticated
-
         return False

@@ -47,7 +47,7 @@ class StorySerializer(serializers.ModelSerializer):
             "spaces",
             "is_premium",
         ]
-        read_only_fields = ["is_active", "created_time", "updated_time", "user"]
+        read_only_fields = ["is_active", "created_time", "updated_time", "user", "views_count"]
 
 
 class StoryDetailSerializer(serializers.ModelSerializer):

@@ -1,11 +1,13 @@
 from django.db import models
+from django.core.cache import cache
 from django.dispatch import receiver
 from django.utils.text import slugify
-from django.db.models.signals import post_save
+from django.db.models.signals import post_delete, post_save
 from ckeditor.fields import RichTextField
 
 from .tasks import send_info_emails
 from apps.users.models import CustomUser
+from xloserver.constants import TOPIC_TAGS_CACHE_KEY
 
 
 class TopicTag(models.Model):
@@ -18,6 +20,12 @@ class TopicTag(models.Model):
     class Meta:
         verbose_name = "Category"
         verbose_name_plural = "Categories"
+
+
+@receiver(post_save, sender=TopicTag)
+@receiver(post_delete, sender=TopicTag)
+def invalidate_topic_tags_cache(sender, **kwargs):
+    cache.delete(TOPIC_TAGS_CACHE_KEY)
 
 
 class Topic(models.Model):

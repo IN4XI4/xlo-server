@@ -9,7 +9,8 @@ from django.core.cache import cache
 from django.core.mail import send_mail
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.files.storage import default_storage
-from django.db.models import Q
+from django.db.models import F, Q
+from django.shortcuts import get_object_or_404
 from django.utils.timezone import now
 from django_countries import countries
 from google.auth.transport import requests as google_requests
@@ -19,7 +20,8 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.blog.models import Like, Story, Comment, UserStoryView
@@ -36,14 +38,24 @@ from apps.users.serializers import (
     ProfileColorSerializer,
     ExperienceSerializer,
     GenderSerializer,
-    UserDetailSerializer,
+    UserProfileDetailSerializer,
+    OwnerUserProfileSerializer,
+    PublicUserSerializer,
     UserBadgeSerializer,
     FollowSerializer,
 )
-from apps.users.utils import generate_unique_username
+from apps.users.utils import (
+    award_activity_points,
+    generate_unique_username,
+    get_activity_stats,
+    get_categories_stats,
+    get_profile_stats,
+)
 
 
 CATALOG_CACHE_TIMEOUT = 60 * 60 * 24  # 24h; invalidated early via post_save/post_delete signals
+PROFILE_STATS_DAYS = 90
+PROFILE_ACTIVITY_CACHE_TIMEOUT = 60 * 5  # 5 min, for activity and categories; new data shows up once it expires
 
 
 class CountryListView(APIView):
@@ -101,13 +113,25 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
     permission_classes = [UserPermissions]
+    # Set per action (profile_stats, activity); actions must override an existing attribute.
+    throttle_scope = None
 
     def get_serializer_class(self):
         if self.action in ["update", "partial_update"]:
             return CompleteUserSerializer
         elif self.action == "retrieve":
-            return UserDetailSerializer
+            if not self.request.user.is_authenticated:
+                return PublicUserSerializer
+            if str(self.kwargs.get("pk")) == str(self.request.user.pk):
+                return OwnerUserProfileSerializer
+            return UserProfileDetailSerializer
         return UserSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if self.action == "retrieve":
+            return queryset.select_related("profile_color", "experience")
+        return queryset
 
     def perform_update(self, serializer):
         instance = self.get_object()
@@ -209,11 +233,17 @@ class UserViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
         now = datetime.now(timezone.utc)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-        if user.last_login is None or user.last_login.date() < now.date():
-            user.active_days += 1
-            user.last_login = now
-            user.save(update_fields=["active_days", "last_login"])
+        # Conditional update: if several requests arrive at once, only one counts the day and awards the point.
+        first_visit_today = (
+            CustomUser.objects.filter(pk=user.pk)
+            .filter(Q(last_login__isnull=True) | Q(last_login__lt=today_start))
+            .update(active_days=F("active_days") + 1, last_login=now)
+        )
+        if first_visit_today:
+            user.refresh_from_db(fields=["active_days", "last_login"])
+            award_activity_points(user, "daily_login")
         serializer = UserMeSerializer(request.user, context={"request": request})
         return Response(serializer.data)
 
@@ -236,6 +266,62 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_401_UNAUTHORIZED)
         serializer = UserBadgeInfoSerializer(request.user, context={"request": request})
         return Response(serializer.data)
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="profile-stats",
+        permission_classes=[IsAuthenticated],
+        throttle_classes=[ScopedRateThrottle],
+        throttle_scope="profile_stats",
+    )
+    def profile_stats(self, request, *args, **kwargs):
+        """
+        Return the profile stats of the authenticated user. Private: always uses
+        request.user and accepts no user id or query params.
+        """
+        response = Response(get_profile_stats(request.user, PROFILE_STATS_DAYS))
+        response["Cache-Control"] = "private, no-store"
+        return response
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="activity",
+        permission_classes=[AllowAny],
+        throttle_classes=[ScopedRateThrottle],
+        throttle_scope="profile_activity",
+    )
+    def activity(self, request, pk=None):
+        """
+        Return the learning activity (heatmap, streaks, cards read, stories viewed) of
+        any active user. Public, the same for every viewer, and cached for a few minutes.
+        """
+        user = get_object_or_404(CustomUser, pk=pk, is_active=True)
+        data = cache.get_or_set(
+            f"users:activity:{user.pk}", lambda: get_activity_stats(user), PROFILE_ACTIVITY_CACHE_TIMEOUT
+        )
+        return Response(data)
+
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="categories",
+        permission_classes=[AllowAny],
+        throttle_classes=[ScopedRateThrottle],
+        throttle_scope="profile_categories",
+    )
+    def categories(self, request, pk=None):
+        """
+        Return how many stories of each category (TopicTag) any active user has read,
+        plus the scale for the bars. Public, the same for every viewer, and cached for a
+        few minutes.
+        """
+        user = get_object_or_404(CustomUser, pk=pk, is_active=True)
+        data = cache.get_or_set(
+            f"users:categories:{user.pk}", lambda: get_categories_stats(user), PROFILE_ACTIVITY_CACHE_TIMEOUT
+        )
+        return Response(data)
 
     @action(detail=False, methods=["put"])
     def update_password(self, request):
@@ -276,7 +362,7 @@ class RankingPagination(PageNumberPagination):
     page_size = 15
 
 
-class ReadOnlyUserViewSet(viewsets.ModelViewSet):
+class ReadOnlyUserViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ReadOnlyUserSerializer
     queryset = CustomUser.objects.all()
     pagination_class = RankingPagination
@@ -298,7 +384,11 @@ class ReadOnlyUserViewSet(viewsets.ModelViewSet):
         return qs
 
 
-class UserBadgeViewSet(viewsets.ModelViewSet):
+class UserBadgeViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Badges are awarded only by the system (update-badges), never created, edited or deleted by users.
+    """
+
     queryset = UserBadge.objects.all().order_by("id")
     serializer_class = UserBadgeSerializer
     permission_classes = [IsAuthenticated]
@@ -308,6 +398,12 @@ class UserBadgeViewSet(viewsets.ModelViewSet):
         "badge_type": ("exact",),
         "level": ("exact",),
     }
+
+    def list(self, request, *args, **kwargs):
+        # Always scoped to one user: without it the whole table would be returned unpaginated.
+        if not request.query_params.get("user"):
+            return Response({"user": ["This query param is required."]}, status=status.HTTP_400_BAD_REQUEST)
+        return super().list(request, *args, **kwargs)
 
     @action(detail=False, methods=["post"], url_path="update-badges")
     def update_badges(self, request):
@@ -427,7 +523,9 @@ class FollowViewSet(viewsets.ModelViewSet):
     }
 
     def get_queryset(self):
-        return Follow.objects.filter(follower__is_active=True, followed__is_active=True)
+        return Follow.objects.filter(follower__is_active=True, followed__is_active=True).select_related(
+            "follower", "followed"
+        )
 
     def perform_create(self, serializer):
         serializer.save(follower=self.request.user)
